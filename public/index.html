@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>啦啦操评分系统</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100vw; height: 100vh; overflow: hidden;
+      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #fce4f3 0%, #e8d5f5 50%, #d5e8f5 100%);
+      color: #1d1d1f;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .container { text-align: center; padding: 40px; }
+
+    h1 {
+      font-size: 48px; font-weight: 700; margin-bottom: 8px;
+      background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle { font-size: 18px; color: #9c27b0; margin-bottom: 48px; font-weight: 500; }
+
+    .cards { display: flex; gap: 28px; justify-content: center; }
+
+    .card {
+      background: #fff; border: none; border-radius: 20px;
+      padding: 44px 48px; text-decoration: none; color: #1d1d1f;
+      width: 250px; transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px rgba(233, 30, 140, 0.1);
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(233, 30, 140, 0.18); }
+    .card:active { transform: scale(0.97); }
+
+    .card-icon { font-size: 52px; margin-bottom: 18px; }
+    .card h2 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
+    .card p { font-size: 14px; color: #9c27b0; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>啦啦操评分系统</h1>
+    <p class="subtitle">选择身份进入</p>
+    <div class="cards">
+      <a href="teacher.html" class="card">
+        <div class="card-icon">&#127891;</div>
+        <h2>教师端</h2>
+        <p>控制评分流程<br>查看数据分析</p>
+      </a>
+      <a href="score.html" class="card">
+        <div class="card-icon">&#9997;</div>
+        <h2>学生评分</h2>
+        <p>为其他组的<br>展示打分</p>
+      </a>
+      <a href="dashboard.html" class="card">
+        <div class="card-icon">&#128202;</div>
+        <h2>数据大屏</h2>
+        <p>实时查看<br>评分结果</p>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

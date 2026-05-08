@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>啦啦操评分数据大屏</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* 全屏16:9布局 - 无需滚动 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fce4f3;
+      color: #1d1d1f;
+    }
+
+    /* 主容器 - 填满整个屏幕 */
+    .dashboard {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr;
+    }
+
+    /* 顶部标题栏 */
+    .header {
+      background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      color: #ffffff;
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.28px;
+    }
+
+    .header .subtitle {
+      font-size: 16px;
+      color: #999;
+      font-weight: 400;
+    }
+
+    /* 主内容区 - 两列布局 */
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 20px;
+      padding: 20px 40px 30px;
+      min-height: 0;
+    }
+
+    /* 面板通用样式 */
+    .panel {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    /* 图表面板 */
+    .chart-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .radar-panel {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    /* 排名面板 */
+    .ranking-panel {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    /* AI报告面板 */
+    .ai-panel {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    /* 排名列表 */
+    .ranking-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f5f5f7;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .rank-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 16px;
+      color: #fff;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+
+    .rank-1 { background: linear-gradient(135deg, #ff9500, #ff6b00); }
+    .rank-2 { background: linear-gradient(135deg, #8e8e93, #636366); }
+    .rank-3 { background: linear-gradient(135deg, #a2845e, #896a46); }
+    .rank-4 { background: #e91e8c; }
+
+    .rank-info {
+      flex: 1;
+    }
+
+    .rank-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .rank-details {
+      font-size: 13px;
+      color: #7a7a7a;
+    }
+
+    .rank-score {
+      font-size: 24px;
+      font-weight: 600;
+      color: #e91e8c;
+    }
+
+    /* AI报告 */
+    .ai-content {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1d1d1f;
+    }
+
+    .ai-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .ai-content::-webkit-scrollbar-thumb {
+      background: #d2d2d7;
+      border-radius: 2px;
+    }
+
+    /* 结构化报告样式 */
+    .report-section {
+      margin-bottom: 16px;
+    }
+
+    .report-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #9c27b0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .report-text {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+      padding: 10px 14px;
+      background: #f5f5f7;
+      border-radius: 8px;
+    }
+
+    .report-group {
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .report-group-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+
+    .report-row {
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .tag-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .tag-orange {
+      background: #ffedd5;
+      color: #9a3412;
+    }
+
+    .ai-btn {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+      border: none;
+      border-radius: 9999px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .ai-btn:active {
+      transform: scale(0.95);
+    }
+
+    .ai-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    /* 图表容器 */
+    .chart-wrapper {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    .chart-wrapper canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d2d2d7;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- 顶部标题 -->
+    <div class="header">
+      <div>
+        <h1>啦啦操评分数据大屏</h1>
+      </div>
+      <div class="subtitle">实时更新 · 自动刷新</div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 左上: 柱状图 -->
+      <div class="panel chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">各组总分对比</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 右上: 雷达图 -->
+      <div class="panel radar-panel">
+        <div class="panel-header">
+          <span class="panel-title">各维度雷达图</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 左下: 排名 -->
+      <div class="panel ranking-panel">
+        <div class="panel-header">
+          <span class="panel-title">排名</span>
+        </div>
+        <div class="ranking-list" id="rankingList"></div>
+      </div>
+
+      <!-- 右下: AI报告 -->
+      <div class="panel ai-panel">
+        <div class="panel-header">
+          <span class="panel-title">AI分析报告</span>
+          <button class="ai-btn" onclick="generateReport()" id="aiBtn">生成报告</button>
+        </div>
+        <div class="ai-content" id="reportContent">点击"生成报告"按钮，AI将分析各组得分并生成专业点评...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = io();
+    let barChart = null;
+    let radarChart = null;
+    let isLoading = false;
+
+    // 初始加载 + socket实时更新（无轮询，避免闪烁）
+    loadData();
+    socket.on('scoreUpdate', () => { if (!isLoading) loadData(); });
+
+    async function loadData() {
+      if (isLoading) return;
+      isLoading = true;
+      try {
+        const res = await fetch('/api/results');
+        const data = await res.json();
+        updateCharts(data.results);
+        updateRanking(data.results);
+      } catch (err) {
+        console.error('加载数据失败:', err);
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function updateCharts(results) {
+      const labels = results.map(r => r.groupName);
+      const totals = results.map(r => r.totalAvg || 0);
+
+      const colors = [
+        { bg: 'rgba(233, 30, 140, 0.85)', border: 'rgba(233, 30, 140, 1)' },
+        { bg: 'rgba(156, 39, 176, 0.85)', border: 'rgba(156, 39, 176, 1)' },
+        { bg: 'rgba(255, 193, 7, 0.85)', border: 'rgba(255, 193, 7, 1)' },
+        { bg: 'rgba(233, 30, 99, 0.85)', border: 'rgba(233, 30, 99, 1)' },
+        { bg: 'rgba(103, 58, 183, 0.85)', border: 'rgba(103, 58, 183, 1)' },
+        { bg: 'rgba(255, 87, 34, 0.85)', border: 'rgba(255, 87, 34, 1)' }
+      ];
+
+      // 柱状图
+      const barCtx = document.getElementById('barChart').getContext('2d');
+      if (barChart) barChart.destroy();
+
+      barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '总分',
+            data: totals,
+            backgroundColor: results.map((_, i) => colors[i % colors.length].bg),
+            borderColor: results.map((_, i) => colors[i % colors.length].border),
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10,
+              grid: { color: '#f0f0f0' },
+              ticks: { font: { size: 14 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 15, weight: '600' } }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+
+      // 雷达图
+      const radarCtx = document.getElementById('radarChart').getContext('2d');
+      if (radarChart) radarChart.destroy();
+
+      const dimensions = ['节奏感', '动作整齐度', '团队配合', '表现力', '创新性'];
+      const radarColors = [
+        { bg: 'rgba(233, 30, 140, 0.15)', border: 'rgba(233, 30, 140, 1)' },
+        { bg: 'rgba(156, 39, 176, 0.15)', border: 'rgba(156, 39, 176, 1)' },
+        { bg: 'rgba(255, 193, 7, 0.15)', border: 'rgba(255, 193, 7, 1)' },
+        { bg: 'rgba(233, 30, 99, 0.15)', border: 'rgba(233, 30, 99, 1)' }
+      ];
+
+      const datasets = results.map((r, i) => ({
+        label: r.groupName,
+        data: r.avgScores ? r.avgScores.map(d => d.avg) : [0, 0, 0, 0, 0],
+        backgroundColor: radarColors[i % radarColors.length].bg,
+        borderColor: radarColors[i % radarColors.length].border,
+        borderWidth: 2,
+        pointBackgroundColor: radarColors[i % radarColors.length].border,
+        pointRadius: 4
+      }));
+
+      radarChart = new Chart(radarCtx, {
+        type: 'radar',
+        data: { labels: dimensions, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 10,
+              grid: { color: '#e0e0e0' },
+              angleLines: { color: '#e0e0e0' },
+              pointLabels: { font: { size: 14, weight: '500' } },
+              ticks: { font: { size: 12 }, stepSize: 2 }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { size: 13 }, padding: 16, usePointStyle: true }
+            }
+          }
+        }
+      });
+    }
+
+    function updateRanking(results) {
+      const list = document.getElementById('rankingList');
+      list.innerHTML = results.map((r, i) => `
+        <div class="ranking-item">
+          <div class="rank-badge rank-${r.rank}">${r.rank}</div>
+          <div class="rank-info">
+            <div class="rank-name">${r.groupName}</div>
+            <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${d.dimension} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
+          </div>
+          <div class="rank-score">${r.totalAvg ? r.totalAvg.toFixed(2) : '-'}</div>
+        </div>
+      `).join('');
+    }
+
+    // 渲染结构化报告
+    function renderReport(report) {
+      if (!report) return '<div style="color:#7a7a7a;">暂无报告数据</div>';
+
+      let html = '';
+
+      if (report.overview) {
+        html += `<div class="report-section">
+          <div class="report-label">整体点评</div>
+          <div class="report-text">${report.overview}</div>
+        </div>`;
+      }
+
+      if (report.groups && report.groups.length > 0) {
+        html += '<div class="report-section"><div class="report-label">各组点评</div>';
+        report.groups.forEach(g => {
+          html += `<div class="report-group">
+            <div class="report-group-name">${g.name}</div>
+            <div class="report-row"><span class="tag tag-green">亮点</span>${g.highlight}</div>
+            <div class="report-row"><span class="tag tag-orange">建议</span>${g.improve}</div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      if (report.suggestion) {
+        html += `<div class="report-section">
+          <div class="report-label">通用建议</div>
+          <div class="report-text">${report.suggestion}</div>
+        </div>`;
+      }
+
+      return html || '<div style="color:#7a7a7a;">报告内容为空</div>';
+    }
+
+    async function generateReport() {
+      const btn = document.getElementById('aiBtn');
+      const content = document.getElementById('reportContent');
+
+      btn.disabled = true;
+      btn.textContent = '分析中...';
+      content.innerHTML = '<div style="text-align:center;padding:40px;color:#7a7a7a;">正在调用AI分析，请稍候...</div>';
+
+      try {
+        const res = await fetch('/api/analyze', { method: 'POST' });
+        const data = await res.json();
+        if (data.report) {
+          content.innerHTML = renderReport(data.report);
+        } else if (data.raw) {
+          content.innerHTML = `<div style="white-space:pre-wrap;color:#333;">${data.raw}</div>`;
+        } else {
+          content.innerHTML = '<div style="color:#7a7a7a;">未返回内容</div>';
+        }
+      } catch (err) {
+        content.innerHTML = '<div style="color:#ff3b30;">生成失败: ' + err.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成报告';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>学生评分</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fce4f3;
+      color: #1d1d1f;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* 顶部 */
+    .header {
+      background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      color: #fff;
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header a {
+      color: #999;
+      text-decoration: none;
+      font-size: 15px;
+    }
+
+    /* 选择组界面 */
+    .select-screen {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    .select-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 48px;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .select-card h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 32px;
+    }
+
+    .select-card select {
+      width: 100%;
+      padding: 16px 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 18px;
+      font-family: inherit;
+      margin-bottom: 24px;
+      appearance: none;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7a7a' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 20px center;
+    }
+
+    .select-card select:focus {
+      outline: none;
+      border-color: #e91e8c;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 9999px;
+      font-size: 18px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: #e91e8c;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0071e3;
+    }
+
+    /* 评分界面 */
+    .scoring-screen {
+      width: 100%;
+      height: 100%;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px 40px 30px;
+    }
+
+    .scoring-screen.active {
+      display: grid;
+    }
+
+    /* 左侧: 评分表单 */
+    .score-form-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .scoring-header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: #f5f5f7;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .scoring-header .label {
+      font-size: 14px;
+      color: #7a7a7a;
+      margin-bottom: 6px;
+    }
+
+    .scoring-header .performer {
+      font-size: 32px;
+      font-weight: 600;
+      color: #9c27b0;
+    }
+
+    .score-items {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .score-item {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px 20px;
+      background: #f5f5f7;
+      border-radius: 10px;
+    }
+
+    .score-item label {
+      width: 100px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      flex-shrink: 0;
+    }
+
+    .score-slider {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #e0e0e0;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .score-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 32px;
+      height: 32px;
+      background: #fff;
+      border: 3px solid #e91e8c;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .score-slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+      background: #fff;
+      border: 3px solid #e91e8c;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .score-num {
+      width: 48px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 600;
+      color: #e91e8c;
+    }
+
+    .submit-area {
+      margin-top: 20px;
+      flex-shrink: 0;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+    }
+
+    /* 右侧: 状态/反馈 */
+    .status-panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .status-icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+    }
+
+    .status-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .status-msg {
+      font-size: 16px;
+      color: #7a7a7a;
+      line-height: 1.6;
+    }
+
+    .success-box {
+      background: #f0fdf4;
+      border: 2px solid #34c759;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .success-box .status-icon {
+      color: #34c759;
+    }
+
+    .success-box .status-title {
+      color: #34c759;
+    }
+
+    /* 等待中 */
+    .waiting-box {
+      background: #f5f5f7;
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .waiting-box .status-title {
+      color: #e91e8c;
+    }
+
+    /* 动画 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>学生评分</h1>
+      <div id="myGroupBadge" style="display:none;">
+        <span style="background:#e91e8c;color:#fff;padding:6px 16px;border-radius:9999px;font-size:15px;font-weight:500;" id="myGroupName"></span>
+      </div>
+      <a href="/">返回首页</a>
+    </div>
+
+    <!-- 选择组 -->
+    <div class="select-screen" id="selectScreen">
+      <div class="select-card fade-in">
+        <h2>选择你所在的组</h2>
+        <select id="myGroup"></select>
+        <button onclick="joinSession()" class="btn btn-primary">进入评分</button>
+      </div>
+    </div>
+
+    <!-- 评分界面 -->
+    <div class="scoring-screen" id="scoringScreen">
+      <!-- 左: 评分 -->
+      <div class="score-form-panel" id="scoreForm">
+        <div class="scoring-header">
+          <div class="label">当前表演组</div>
+          <div class="performer" id="performerName">-</div>
+        </div>
+
+        <div class="score-items">
+          <div class="score-item">
+            <label>节奏感</label>
+            <input type="range" min="1" max="10" value="5" class="score-slider" data-dim="0">
+            <span class="score-num">5</span>
+          </div>
+          <div class="score-item">
+            <label>动作整齐度</label>
+            <input type="range" min="1" max="10" value="5" class="score-slider" data-dim="1">
+            <span class="score-num">5</span>
+          </div>
+          <div class="score-item">
+            <label>团队配合</label>
+            <input type="range" min="1" max="10" value="5" class="score-slider" data-dim="2">
+            <span class="score-num">5</span>
+          </div>
+          <div class="score-item">
+            <label>表现力</label>
+            <input type="range" min="1" max="10" value="5" class="score-slider" data-dim="3">
+            <span class="score-num">5</span>
+          </div>
+          <div class="score-item">
+            <label>创新性</label>
+            <input type="range" min="1" max="10" value="5" class="score-slider" data-dim="4">
+            <span class="score-num">5</span>
+          </div>
+        </div>
+
+        <div class="submit-area">
+          <button onclick="submitScore()" class="btn btn-primary btn-submit" id="submitBtn">提交评分</button>
+        </div>
+      </div>
+
+      <!-- 右: 状态 -->
+      <div class="status-panel" id="statusPanel">
+        <div class="waiting-box fade-in">
+          <div class="status-icon">&#9203;</div>
+          <div class="status-title">等待评分</div>
+          <div class="status-msg">教师开始评分后，<br>请为表演组打分</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = io();
+    let sessionData = null;
+    let myGroupIndex = -1;
+    let currentPerformerIndex = -1;
+    let hasSubmitted = false;
+
+    window.addEventListener('load', async () => {
+      await loadSession();
+
+      // 滑块事件
+      document.querySelectorAll('.score-slider').forEach(slider => {
+        slider.addEventListener('input', (e) => {
+          e.target.nextElementSibling.textContent = e.target.value;
+        });
+      });
+
+      socket.on('roundStart', (data) => {
+        currentPerformerIndex = data.performerIndex;
+        showScoring();
+      });
+
+      socket.on('roundEnd', () => {
+        currentPerformerIndex = -1;
+        showWaiting();
+      });
+    });
+
+    async function loadSession() {
+      try {
+        const res = await fetch('/api/session');
+        sessionData = await res.json();
+
+        const select = document.getElementById('myGroup');
+        select.innerHTML = sessionData.groups.map((g, i) =>
+          `<option value="${i}">${g}</option>`
+        ).join('');
+      } catch (err) {
+        console.error('加载会话失败:', err);
+      }
+    }
+
+    function joinSession() {
+      myGroupIndex = parseInt(document.getElementById('myGroup').value);
+      document.getElementById('selectScreen').style.display = 'none';
+      document.getElementById('scoringScreen').classList.add('active');
+
+      // 显示所在组
+      const badge = document.getElementById('myGroupBadge');
+      document.getElementById('myGroupName').textContent = sessionData.groups[myGroupIndex];
+      badge.style.display = 'block';
+    }
+
+    function showScoring() {
+      if (!sessionData) return;
+
+      const scoreForm = document.getElementById('scoreForm');
+      const statusPanel = document.getElementById('statusPanel');
+      const performerName = document.getElementById('performerName');
+
+      if (currentPerformerIndex !== myGroupIndex) {
+        // 其他组表演，可以打分
+        performerName.textContent = sessionData.groups[currentPerformerIndex];
+        scoreForm.style.display = 'flex';
+        hasSubmitted = false;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = '提交评分';
+        resetSliders();
+
+        statusPanel.innerHTML = `
+          <div class="waiting-box fade-in">
+            <div class="status-icon">&#127916;</div>
+            <div class="status-title">请打分</div>
+            <div class="status-msg">调整滑块后点击提交</div>
+          </div>
+        `;
+      } else {
+        // 自己组表演，不能打分
+        performerName.textContent = sessionData.groups[currentPerformerIndex];
+        scoreForm.style.display = 'none';
+
+        statusPanel.innerHTML = `
+          <div class="success-box fade-in">
+            <div class="status-icon">&#127881;</div>
+            <div class="status-title">你们组正在表演</div>
+            <div class="status-msg">请等待其他组打分</div>
+          </div>
+        `;
+      }
+    }
+
+    function showWaiting() {
+      const scoreForm = document.getElementById('scoreForm');
+      const statusPanel = document.getElementById('statusPanel');
+
+      scoreForm.style.display = 'none';
+
+      statusPanel.innerHTML = `
+        <div class="waiting-box fade-in">
+          <div class="status-icon">&#9203;</div>
+          <div class="status-title">等待中</div>
+          <div class="status-msg">请等待教师开始下一轮</div>
+        </div>
+      `;
+    }
+
+    function resetSliders() {
+      document.querySelectorAll('.score-slider').forEach(slider => {
+        slider.value = 5;
+        slider.nextElementSibling.textContent = '5';
+      });
+    }
+
+    async function submitScore() {
+      if (hasSubmitted) return;
+
+      const scores = [];
+      document.querySelectorAll('.score-slider').forEach(slider => {
+        scores.push(parseInt(slider.value));
+      });
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      try {
+        const res = await fetch('/api/score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scorerGroup: myGroupIndex,
+            targetGroup: currentPerformerIndex,
+            scores
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = '提交评分';
+          alert(data.error || '提交失败');
+          return;
+        }
+
+        hasSubmitted = true;
+        btn.textContent = '已提交';
+
+        const statusPanel = document.getElementById('statusPanel');
+        statusPanel.innerHTML = `
+          <div class="success-box fade-in">
+            <div class="status-icon">&#10004;</div>
+            <div class="status-title">评分已提交</div>
+            <div class="status-msg">感谢你的评分！<br>请等待下一轮</div>
+          </div>
+        `;
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = '提交评分';
+        alert('提交失败: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

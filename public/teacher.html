@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>教师控制台</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fce4f3;
+      color: #1d1d1f;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* 顶部 */
+    .header {
+      background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      color: #fff;
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.28px;
+    }
+
+    .header a {
+      color: #999;
+      text-decoration: none;
+      font-size: 15px;
+    }
+
+    /* 主内容 - 三列布局 */
+    .main {
+      display: grid;
+      grid-template-columns: 340px 1fr 340px;
+      gap: 20px;
+      padding: 20px 40px 30px;
+      min-height: 0;
+    }
+
+    /* 面板 */
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    /* 左侧: 控制面板 */
+    .control-panel {
+      grid-column: 1;
+    }
+
+    .control-group {
+      margin-bottom: 24px;
+    }
+
+    .control-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #7a7a7a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 17px;
+      font-family: inherit;
+      background: #fff;
+      color: #1d1d1f;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7a7a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #e91e8c;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 9999px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.1s;
+      width: 100%;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: #e91e8c;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0071e3;
+    }
+
+    .btn-warning {
+      background: #ff9500;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #e91e8c;
+      border: 1px solid #e91e8c;
+    }
+
+    /* 当前表演 */
+    .current-info {
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .current-label {
+      font-size: 13px;
+      color: #7a7a7a;
+      margin-bottom: 6px;
+    }
+
+    .current-name {
+      font-size: 28px;
+      font-weight: 600;
+      color: #9c27b0;
+    }
+
+    .round-info {
+      font-size: 14px;
+      color: #7a7a7a;
+      margin-top: 8px;
+    }
+
+    /* 中间: 实时得分 */
+    .scores-panel {
+      grid-column: 2;
+    }
+
+    .scores-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .score-card {
+      background: #f5f5f7;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .score-group {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .score-value {
+      font-size: 42px;
+      font-weight: 600;
+      color: #9c27b0;
+      line-height: 1;
+    }
+
+    .score-dims {
+      font-size: 12px;
+      color: #7a7a7a;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .no-data {
+      color: #ccc;
+      font-size: 14px;
+    }
+
+    /* 右侧: 操作 */
+    .actions-panel {
+      grid-column: 3;
+    }
+
+    .action-btn {
+      margin-bottom: 12px;
+    }
+
+    .btn-danger {
+      background: #ff3b30;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #d32f2f;
+    }
+
+    /* 配置面板 */
+    .config-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .config-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      width: 480px;
+      max-width: 90vw;
+    }
+
+    .config-card h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .config-card p {
+      font-size: 14px;
+      color: #7a7a7a;
+      margin-bottom: 24px;
+    }
+
+    .group-inputs {
+      margin-bottom: 24px;
+    }
+
+    .group-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .group-input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+
+    .group-input-row input:focus {
+      outline: none;
+      border-color: #e91e8c;
+    }
+
+    .group-num {
+      width: 28px;
+      height: 28px;
+      background: #f5f5f7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #7a7a7a;
+      flex-shrink: 0;
+    }
+
+    .btn-remove-group {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: #f5f5f7;
+      border-radius: 50%;
+      font-size: 16px;
+      color: #ff3b30;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .btn-remove-group:hover {
+      background: #fee2e2;
+    }
+
+    .btn-add-group {
+      width: 100%;
+      padding: 10px;
+      border: 2px dashed #d2d2d7;
+      border-radius: 8px;
+      background: transparent;
+      font-size: 14px;
+      color: #7a7a7a;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+
+    .btn-add-group:hover {
+      border-color: #e91e8c;
+      color: #e91e8c;
+    }
+
+    .session-id {
+      background: #f5f5f7;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 13px;
+      color: #7a7a7a;
+      word-break: break-all;
+      margin-top: auto;
+    }
+
+    .session-id span {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    /* AI报告区域 */
+    .ai-report {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 12px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1d1d1f;
+    }
+
+    .ai-report::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .ai-report::-webkit-scrollbar-thumb {
+      background: #d2d2d7;
+      border-radius: 2px;
+    }
+
+    /* Markdown渲染样式 */
+    .ai-report h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e0e0;
+      color: #1d1d1f;
+    }
+
+    .ai-report h2 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 18px 0 10px;
+      color: #e91e8c;
+    }
+
+    .ai-report h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 14px 0 8px;
+      color: #333;
+    }
+
+    .ai-report p {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .ai-report ul,
+    .ai-report ol {
+      margin: 6px 0 10px;
+      padding-left: 20px;
+    }
+
+    .ai-report li {
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .ai-report li strong {
+      color: #1d1d1f;
+    }
+
+    .ai-report strong {
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .ai-report em {
+      font-style: italic;
+      color: #7a7a7a;
+    }
+
+    .ai-report hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 14px 0;
+    }
+
+    /* 结构化报告样式 */
+    .report-section {
+      margin-bottom: 16px;
+    }
+
+    .report-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #9c27b0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .report-text {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+      padding: 10px 14px;
+      background: #f5f5f7;
+      border-radius: 8px;
+    }
+
+    .report-group {
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .report-group-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+
+    .report-row {
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .tag-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .tag-orange {
+      background: #ffedd5;
+      color: #9a3412;
+    }
+  </style>
+</head>
+<body>
+  <!-- 分组配置弹窗 -->
+  <div class="config-overlay" id="configOverlay" style="display:none;">
+    <div class="config-card">
+      <h2>设置分组</h2>
+      <p>输入各组名称，至少2组，最多10组</p>
+      <div class="group-inputs" id="groupInputs"></div>
+      <button class="btn-add-group" onclick="addGroupInput()">+ 添加一组</button>
+      <button class="btn btn-primary" style="width:100%;" onclick="saveGroups()">确认</button>
+    </div>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      <h1>教师控制台</h1>
+      <a href="/">返回首页</a>
+    </div>
+
+    <div class="main">
+      <!-- 左侧: 控制 -->
+      <div class="panel control-panel">
+        <div class="panel-title">评分控制</div>
+
+        <div class="current-info">
+          <div class="current-label">当前表演组</div>
+          <div class="current-name" id="currentPerformer">-</div>
+          <div class="round-info" id="roundInfo">第 <span id="roundNum">0</span> 轮</div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">选择表演组</div>
+          <select id="performerSelect"></select>
+        </div>
+
+        <div id="btnStart">
+          <button onclick="startRound()" class="btn btn-primary">开始评分</button>
+        </div>
+        <div id="btnEnd" style="display:none;">
+          <button onclick="endRound()" class="btn btn-warning">结束本轮</button>
+        </div>
+      </div>
+
+      <!-- 中间: 得分 -->
+      <div class="panel scores-panel">
+        <div class="panel-title">实时得分</div>
+        <div class="scores-grid" id="scoresGrid"></div>
+      </div>
+
+      <!-- 右侧: 操作 -->
+      <div class="panel actions-panel">
+        <div class="panel-title">操作</div>
+
+        <div class="action-btn">
+          <button onclick="openConfig()" class="btn btn-secondary">修改分组</button>
+        </div>
+        <div class="action-btn">
+          <button onclick="openDashboard()" class="btn btn-secondary">打开数据大屏</button>
+        </div>
+        <div class="action-btn">
+          <button onclick="generateReport()" class="btn btn-success" id="aiBtn">生成AI报告</button>
+        </div>
+        <div class="action-btn">
+          <button onclick="resetData()" class="btn btn-danger" id="resetBtn">清空所有数据</button>
+        </div>
+
+        <div class="ai-report" id="reportContent">点击"生成AI报告"，AI将分析各组得分并生成专业点评...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = io();
+    let sessionData = null;
+
+    let groupNames = [];
+
+    window.addEventListener('load', async () => {
+      await loadSession();
+      socket.on('scoreUpdate', loadScores);
+      socket.on('sessionReset', () => { loadSession(); });
+    });
+
+    async function loadSession() {
+      try {
+        const res = await fetch('/api/session');
+        sessionData = await res.json();
+
+        // 没有会话时弹出配置
+        if (!sessionData.id || sessionData.status === 'empty') {
+          showConfig(['第一组', '第二组', '第三组', '第四组']);
+          return;
+        }
+
+        groupNames = sessionData.groups;
+        const select = document.getElementById('performerSelect');
+        select.innerHTML = sessionData.groups.map((g, i) =>
+          `<option value="${i}">${g}</option>`
+        ).join('');
+
+        // 从服务器同步轮次状态
+        document.getElementById('roundNum').textContent = sessionData.currentRound;
+        if (sessionData.status === 'scoring' && sessionData.currentPerformer >= 0) {
+          document.getElementById('currentPerformer').textContent = sessionData.groups[sessionData.currentPerformer];
+          document.getElementById('btnStart').style.display = 'none';
+          document.getElementById('btnEnd').style.display = 'block';
+        } else {
+          document.getElementById('btnStart').style.display = 'block';
+          document.getElementById('btnEnd').style.display = 'none';
+        }
+
+        loadScores();
+      } catch (err) {
+        console.error('加载会话失败:', err);
+      }
+    }
+
+    // 分组配置
+    function showConfig(defaults) {
+      groupNames = defaults || ['第一组', '第二组', '第三组', '第四组'];
+      renderGroupInputs();
+      document.getElementById('configOverlay').style.display = 'flex';
+    }
+
+    function renderGroupInputs() {
+      const container = document.getElementById('groupInputs');
+      container.innerHTML = groupNames.map((name, i) => `
+        <div class="group-input-row">
+          <span class="group-num">${i + 1}</span>
+          <input type="text" value="${name}" onchange="groupNames[${i}]=this.value" placeholder="输入组名">
+          ${groupNames.length > 2 ? `<button class="btn-remove-group" onclick="removeGroup(${i})">×</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function addGroupInput() {
+      if (groupNames.length >= 10) return;
+      groupNames.push(`第${groupNames.length + 1}组`);
+      renderGroupInputs();
+    }
+
+    function removeGroup(index) {
+      if (groupNames.length <= 2) return;
+      groupNames.splice(index, 1);
+      renderGroupInputs();
+    }
+
+    async function saveGroups() {
+      // 从输入框读取最新值
+      const inputs = document.getElementById('groupInputs').querySelectorAll('input');
+      const names = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v);
+      if (names.length < 2) {
+        alert('至少需要2个组');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groups: names })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '保存失败');
+          return;
+        }
+        document.getElementById('configOverlay').style.display = 'none';
+        await loadSession();
+      } catch (err) {
+        alert('保存失败: ' + err.message);
+      }
+    }
+
+    function openConfig() {
+      showConfig(groupNames.length > 0 ? groupNames : ['第一组', '第二组', '第三组', '第四组']);
+    }
+
+    async function startRound() {
+      const performerIndex = parseInt(document.getElementById('performerSelect').value);
+
+      try {
+        const res = await fetch('/api/round', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ performerIndex })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '开始轮次失败');
+          return;
+        }
+
+        document.getElementById('currentPerformer').textContent = sessionData.groups[performerIndex];
+        document.getElementById('roundNum').textContent = data.round || (sessionData.currentRound + 1);
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnEnd').style.display = 'block';
+      } catch (err) {
+        alert('开始轮次失败: ' + err.message);
+      }
+    }
+
+    async function endRound() {
+      try {
+        await fetch('/api/endRound', { method: 'POST' });
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnEnd').style.display = 'none';
+      } catch (err) {
+        alert('结束轮次失败: ' + err.message);
+      }
+    }
+
+    async function loadScores() {
+      try {
+        const res = await fetch('/api/results');
+        const data = await res.json();
+
+        const grid = document.getElementById('scoresGrid');
+        grid.innerHTML = data.results.map(r => `
+          <div class="score-card">
+            <div class="score-group">${r.groupName}</div>
+            <div class="score-value">${r.totalAvg ? r.totalAvg.toFixed(1) : '<span class="no-data">-</span>'}</div>
+            ${r.avgScores ? `<div class="score-dims">${r.avgScores.map(d => `${d.dimension} ${d.avg.toFixed(1)}`).join(' · ')}</div>` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('加载分数失败:', err);
+      }
+    }
+
+    function openDashboard() {
+      window.open('dashboard.html', '_blank');
+    }
+
+    async function resetData() {
+      if (!confirm('确定要清空所有评分数据吗？此操作不可恢复。')) return;
+
+      const btn = document.getElementById('resetBtn');
+      btn.disabled = true;
+      btn.textContent = '清空中...';
+
+      try {
+        const res = await fetch('/api/reset', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '清空失败');
+          return;
+        }
+        await loadSession();
+      } catch (err) {
+        alert('清空失败: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '清空所有数据';
+      }
+    }
+
+    // 渲染结构化报告
+    function renderReport(report) {
+      if (!report) return '<div style="color:#7a7a7a;">暂无报告数据</div>';
+
+      let html = '';
+
+      // 整体点评
+      if (report.overview) {
+        html += `<div class="report-section">
+          <div class="report-label">整体点评</div>
+          <div class="report-text">${report.overview}</div>
+        </div>`;
+      }
+
+      // 各组点评
+      if (report.groups && report.groups.length > 0) {
+        html += '<div class="report-section"><div class="report-label">各组点评</div>';
+        report.groups.forEach(g => {
+          html += `<div class="report-group">
+            <div class="report-group-name">${g.name}</div>
+            <div class="report-row"><span class="tag tag-green">亮点</span>${g.highlight}</div>
+            <div class="report-row"><span class="tag tag-orange">建议</span>${g.improve}</div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      // 通用建议
+      if (report.suggestion) {
+        html += `<div class="report-section">
+          <div class="report-label">通用建议</div>
+          <div class="report-text">${report.suggestion}</div>
+        </div>`;
+      }
+
+      return html || '<div style="color:#7a7a7a;">报告内容为空</div>';
+    }
+
+    async function generateReport() {
+      const btn = document.getElementById('aiBtn');
+      const content = document.getElementById('reportContent');
+
+      btn.disabled = true;
+      btn.textContent = '分析中...';
+      content.innerHTML = '<div style="text-align:center;padding:20px;color:#7a7a7a;">正在调用AI分析，请稍候...</div>';
+
+      try {
+        const res = await fetch('/api/analyze', { method: 'POST' });
+        const data = await res.json();
+        if (data.report) {
+          content.innerHTML = renderReport(data.report);
+        } else if (data.raw) {
+          // JSON解析失败，显示原始文本
+          content.innerHTML = `<div style="white-space:pre-wrap;color:#333;">${data.raw}</div>`;
+        } else {
+          content.innerHTML = '<div style="color:#7a7a7a;">未返回内容</div>';
+        }
+      } catch (err) {
+        content.innerHTML = '<div style="color:#ff3b30;">生成失败: ' + err.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成AI报告';
+      }
+    }
+  </script>
+</body>
+</html>
