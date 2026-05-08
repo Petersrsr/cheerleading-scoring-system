@@ -600,8 +600,13 @@
   <script>
     let socket = io();
     let sessionData = null;
-
     let groupNames = [];
+
+    // HTML转义防XSS
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
     window.addEventListener('load', async () => {
       await loadSession();
@@ -612,6 +617,7 @@
     async function loadSession() {
       try {
         const res = await fetch('/api/session');
+        if (!res.ok) return;
         sessionData = await res.json();
 
         // 没有会话时弹出配置
@@ -730,7 +736,12 @@
 
     async function endRound() {
       try {
-        await fetch('/api/endRound', { method: 'POST' });
+        const res = await fetch('/api/endRound', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '结束轮次失败');
+          return;
+        }
         document.getElementById('btnStart').style.display = 'block';
         document.getElementById('btnEnd').style.display = 'none';
       } catch (err) {
@@ -741,14 +752,15 @@
     async function loadScores() {
       try {
         const res = await fetch('/api/results');
+        if (!res.ok) return;
         const data = await res.json();
 
         const grid = document.getElementById('scoresGrid');
-        grid.innerHTML = data.results.map(r => `
+        grid.innerHTML = (data.results || []).map(r => `
           <div class="score-card">
-            <div class="score-group">${r.groupName}</div>
+            <div class="score-group">${esc(r.groupName)}</div>
             <div class="score-value">${r.totalAvg ? r.totalAvg.toFixed(1) : '<span class="no-data">-</span>'}</div>
-            ${r.avgScores ? `<div class="score-dims">${r.avgScores.map(d => `${d.dimension} ${d.avg.toFixed(1)}`).join(' · ')}</div>` : ''}
+            ${r.avgScores ? `<div class="score-dims">${r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ')}</div>` : ''}
           </div>
         `).join('');
       } catch (err) {
@@ -783,38 +795,35 @@
       }
     }
 
-    // 渲染结构化报告
+    // 渲染结构化报告（已转义HTML）
     function renderReport(report) {
       if (!report) return '<div style="color:#7a7a7a;">暂无报告数据</div>';
 
       let html = '';
 
-      // 整体点评
       if (report.overview) {
         html += `<div class="report-section">
           <div class="report-label">整体点评</div>
-          <div class="report-text">${report.overview}</div>
+          <div class="report-text">${esc(report.overview)}</div>
         </div>`;
       }
 
-      // 各组点评
       if (report.groups && report.groups.length > 0) {
         html += '<div class="report-section"><div class="report-label">各组点评</div>';
         report.groups.forEach(g => {
           html += `<div class="report-group">
-            <div class="report-group-name">${g.name}</div>
-            <div class="report-row"><span class="tag tag-green">亮点</span>${g.highlight}</div>
-            <div class="report-row"><span class="tag tag-orange">建议</span>${g.improve}</div>
+            <div class="report-group-name">${esc(g.name)}</div>
+            <div class="report-row"><span class="tag tag-green">亮点</span>${esc(g.highlight)}</div>
+            <div class="report-row"><span class="tag tag-orange">建议</span>${esc(g.improve)}</div>
           </div>`;
         });
         html += '</div>';
       }
 
-      // 通用建议
       if (report.suggestion) {
         html += `<div class="report-section">
           <div class="report-label">通用建议</div>
-          <div class="report-text">${report.suggestion}</div>
+          <div class="report-text">${esc(report.suggestion)}</div>
         </div>`;
       }
 
@@ -832,16 +841,17 @@
       try {
         const res = await fetch('/api/analyze', { method: 'POST' });
         const data = await res.json();
-        if (data.report) {
+        if (!res.ok) {
+          content.innerHTML = `<div style="color:#ff3b30;">${esc(data.error || '请求失败')}</div>`;
+        } else if (data.report) {
           content.innerHTML = renderReport(data.report);
         } else if (data.raw) {
-          // JSON解析失败，显示原始文本
-          content.innerHTML = `<div style="white-space:pre-wrap;color:#333;">${data.raw}</div>`;
+          content.innerHTML = `<div style="white-space:pre-wrap;color:#333;">${esc(data.raw)}</div>`;
         } else {
           content.innerHTML = '<div style="color:#7a7a7a;">未返回内容</div>';
         }
       } catch (err) {
-        content.innerHTML = '<div style="color:#ff3b30;">生成失败: ' + err.message + '</div>';
+        content.innerHTML = '<div style="color:#ff3b30;">生成失败: ' + esc(err.message) + '</div>';
       } finally {
         btn.disabled = false;
         btn.textContent = '生成AI报告';

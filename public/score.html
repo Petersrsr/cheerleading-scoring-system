@@ -382,10 +382,14 @@
     let currentPerformerIndex = -1;
     let hasSubmitted = false;
 
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     window.addEventListener('load', async () => {
       await loadSession();
 
-      // 滑块事件
       document.querySelectorAll('.score-slider').forEach(slider => {
         slider.addEventListener('input', (e) => {
           e.target.nextElementSibling.textContent = e.target.value;
@@ -394,49 +398,63 @@
 
       socket.on('roundStart', (data) => {
         currentPerformerIndex = data.performerIndex;
-        showScoring();
+        if (myGroupIndex >= 0) showScoring();
       });
 
       socket.on('roundEnd', () => {
         currentPerformerIndex = -1;
-        showWaiting();
+        if (myGroupIndex >= 0) showWaiting();
       });
     });
 
     async function loadSession() {
       try {
         const res = await fetch('/api/session');
+        if (!res.ok) return;
         sessionData = await res.json();
+
+        if (!sessionData.groups || sessionData.groups.length === 0) return;
 
         const select = document.getElementById('myGroup');
         select.innerHTML = sessionData.groups.map((g, i) =>
-          `<option value="${i}">${g}</option>`
+          `<option value="${i}">${esc(g)}</option>`
         ).join('');
+
+        // 同步服务器轮次状态
+        currentPerformerIndex = sessionData.currentPerformer ?? -1;
       } catch (err) {
         console.error('加载会话失败:', err);
       }
     }
 
     function joinSession() {
+      if (!sessionData || !sessionData.groups) {
+        alert('会话数据加载失败，请刷新页面');
+        return;
+      }
       myGroupIndex = parseInt(document.getElementById('myGroup').value);
       document.getElementById('selectScreen').style.display = 'none';
       document.getElementById('scoringScreen').classList.add('active');
 
-      // 显示所在组
-      const badge = document.getElementById('myGroupBadge');
       document.getElementById('myGroupName').textContent = sessionData.groups[myGroupIndex];
-      badge.style.display = 'block';
+      document.getElementById('myGroupBadge').style.display = 'block';
+
+      // 根据服务器状态显示正确界面
+      if (sessionData.status === 'scoring' && currentPerformerIndex >= 0) {
+        showScoring();
+      } else {
+        showWaiting();
+      }
     }
 
     function showScoring() {
-      if (!sessionData) return;
+      if (!sessionData || currentPerformerIndex < 0) return;
 
       const scoreForm = document.getElementById('scoreForm');
       const statusPanel = document.getElementById('statusPanel');
       const performerName = document.getElementById('performerName');
 
       if (currentPerformerIndex !== myGroupIndex) {
-        // 其他组表演，可以打分
         performerName.textContent = sessionData.groups[currentPerformerIndex];
         scoreForm.style.display = 'flex';
         hasSubmitted = false;
@@ -452,7 +470,6 @@
           </div>
         `;
       } else {
-        // 自己组表演，不能打分
         performerName.textContent = sessionData.groups[currentPerformerIndex];
         scoreForm.style.display = 'none';
 

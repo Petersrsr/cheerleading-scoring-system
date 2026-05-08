@@ -17,6 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let session = null;
 
 function createSession(groups) {
+  if (!Array.isArray(groups) || groups.length < 2) return null;
   const scores = {};
   groups.forEach((_, i) => { scores[i] = {}; });
   session = {
@@ -57,8 +58,14 @@ app.post('/api/session', (req, res) => {
   if (!Array.isArray(groups) || groups.length < 2) {
     return res.status(400).json({ error: '至少需要2个组' });
   }
+  if (groups.length > 10) {
+    return res.status(400).json({ error: '最多10个组' });
+  }
   if (groups.some(g => typeof g !== 'string' || !g.trim())) {
     return res.status(400).json({ error: '组名不能为空' });
+  }
+  if (groups.some(g => g.trim().length > 20)) {
+    return res.status(400).json({ error: '组名不能超过20个字符' });
   }
   createSession(groups.map(g => g.trim()));
   res.json({ success: true, session: { id: session.id, groups: session.groups } });
@@ -81,6 +88,9 @@ app.post('/api/score', (req, res) => {
   if (!session) {
     return res.status(400).json({ error: '没有会话' });
   }
+  if (session.status !== 'scoring') {
+    return res.status(400).json({ error: '当前不是评分时段' });
+  }
 
   // 验证输入
   if (typeof scorerGroup !== 'number' || scorerGroup < 0 || scorerGroup >= session.groups.length) {
@@ -101,12 +111,8 @@ app.post('/api/score', (req, res) => {
 
   session.scores[targetGroup][scorerGroup] = scores;
 
-  // 通过WebSocket广播评分更新
-  io.emit('scoreUpdate', {
-    targetGroup,
-    scorerGroup,
-    scores
-  });
+  // 通过WebSocket广播评分更新（不泄露评分者身份）
+  io.emit('scoreUpdate', { targetGroup });
 
   res.json({ success: true });
 });
@@ -140,6 +146,9 @@ app.post('/api/round', (req, res) => {
 
 // 结束评分轮次
 app.post('/api/endRound', (req, res) => {
+  if (!session) {
+    return res.status(400).json({ error: '没有会话' });
+  }
   if (session.status !== 'scoring') {
     return res.status(400).json({ error: '当前没有进行中的轮次' });
   }
@@ -157,7 +166,10 @@ app.get('/api/results', (req, res) => {
 
   const results = session.groups.map((groupName, groupIndex) => {
     const scoresByOthers = Object.entries(session.scores[groupIndex] || {})
-      .filter(([scorer]) => parseInt(scorer) !== groupIndex) // 排除自评
+      .filter(([scorer]) => {
+        const idx = parseInt(scorer);
+        return Number.isInteger(idx) && idx !== groupIndex;
+      })
       .map(([, s]) => s);
 
     if (scoresByOthers.length === 0) {
@@ -179,8 +191,8 @@ app.get('/api/results', (req, res) => {
     return { groupIndex, groupName, avgScores, totalAvg };
   });
 
-  // 排名（不修改原数组）
-  const ranked = [...results].sort((a, b) => (b.totalAvg || 0) - (a.totalAvg || 0));
+  // 排名（深拷贝避免修改原数组）
+  const ranked = results.map((r, i) => ({ ...r })).sort((a, b) => (b.totalAvg || 0) - (a.totalAvg || 0));
   ranked.forEach((r, i) => r.rank = i + 1);
 
   res.json({ session: { id: session.id, groups: session.groups, status: session.status }, results: ranked });
@@ -192,10 +204,18 @@ app.post('/api/analyze', async (req, res) => {
     return res.json({ analysis: '暂无会话数据。' });
   }
 
+  // 检查 API Key
+  if (!process.env.AI_API_KEY) {
+    return res.status(500).json({ error: '未配置 AI API Key，请在 .env 文件中设置 AI_API_KEY' });
+  }
+
   // 准备分析数据
   const analysisData = session.groups.map((groupName, groupIndex) => {
     const scoresByOthers = Object.entries(session.scores[groupIndex] || {})
-      .filter(([scorer]) => parseInt(scorer) !== groupIndex) // 排除自评
+      .filter(([scorer]) => {
+        const idx = parseInt(scorer);
+        return Number.isInteger(idx) && idx !== groupIndex;
+      })
       .map(([, s]) => s);
 
     if (scoresByOthers.length === 0) return null;
@@ -264,12 +284,11 @@ ${analysisData.map(g => `${g.groupName}: 总分${g.totalAvg}, ${g.avgScores.map(
 
     const data = await response.json();
     const message = data.choices?.[0]?.message || {};
-    // MiMo-V2-Flash可能在reasoning_content或content中返回内容
     const raw = message.content || message.reasoning_content || '';
 
-    // 尝试解析JSON，失败则返回原始文本
+    // 尝试解析JSON（非贪婪匹配）
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const jsonMatch = raw.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         const report = JSON.parse(jsonMatch[0]);
         return res.json({ report });
