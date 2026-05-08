@@ -31,11 +31,21 @@ cd cheerleading-scoring-system
 # 安装依赖
 npm install
 
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入你的 API Key
+
 # 启动服务
 npm start
 ```
 
 服务启动后访问 `http://localhost:3000`
+
+### 环境变量
+
+| 变量名 | 说明 | 必填 |
+|--------|------|------|
+| `AI_API_KEY` | 小米 MiMo API Key | 是 |
 
 ### Docker 部署（可选）
 
