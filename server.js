@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -245,7 +246,7 @@ ${analysisData.map(g => `${g.groupName}: 总分${g.totalAvg}, ${g.avgScores.map(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer sk-c2ho2y9g88y25z0qvde5sytqtq3iwstq176voeu7frgdjo9s`
+        'Authorization': `Bearer ${process.env.AI_API_KEY}`
       },
       body: JSON.stringify({
         model: 'mimo-v2-flash',
