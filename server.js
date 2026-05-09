@@ -311,6 +311,96 @@ ${analysisData.map(g => `${g.groupName}: 总分${g.totalAvg}, ${g.avgScores.map(
   }
 });
 
+// AI对话接口
+const chatHistories = new Map(); // 存储对话历史
+const chatContexts = new Map(); // 存储上下文（评分数据+报告）
+
+app.post('/api/chat', async (req, res) => {
+  const { sessionId, message, context } = req.body;
+
+  if (!process.env.AI_API_KEY) {
+    return res.status(500).json({ error: '未配置 AI API Key' });
+  }
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: '消息不能为空' });
+  }
+
+  // 更新上下文（如果有）
+  if (context) {
+    chatContexts.set(sessionId, context);
+  }
+
+  // 获取或创建对话历史
+  if (!chatHistories.has(sessionId)) {
+    chatHistories.set(sessionId, []);
+  }
+  const history = chatHistories.get(sessionId);
+  const ctx = chatContexts.get(sessionId) || {};
+
+  // 构建系统提示（包含评分数据和报告）
+  let systemPrompt = `你是一位专业的啦啦操评委和体育教学助手。用户是体育老师，正在查看啦啦操评分数据分析。
+请用中文回答，语气专业但亲切。回答要简洁明了，每次回复控制在200字以内。`;
+
+  if (ctx.scores) {
+    systemPrompt += `\n\n当前评分数据：\n${ctx.scores}`;
+  }
+  if (ctx.report) {
+    systemPrompt += `\n\n已生成的分析报告：\n${ctx.report}`;
+  }
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history.slice(-10),
+    { role: 'user', content: message }
+  ];
+
+  try {
+    const response = await fetch('https://api.xiaomimimo.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.AI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'mimo-v2-flash',
+        messages,
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('AI API错误:', response.status, errText);
+      return res.status(502).json({ error: `AI服务返回错误 (${response.status})` });
+    }
+
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || '抱歉，我无法回答这个问题。';
+
+    // 保存对话历史
+    history.push({ role: 'user', content: message });
+    history.push({ role: 'assistant', content: reply });
+
+    // 限制历史长度
+    if (history.length > 20) {
+      history.splice(0, history.length - 20);
+    }
+
+    res.json({ reply });
+  } catch (error) {
+    console.error('AI对话错误:', error);
+    res.status(500).json({ error: 'AI对话失败，请稍后重试' });
+  }
+});
+
+// 清空对话历史
+app.post('/api/chat/clear', (req, res) => {
+  const { sessionId } = req.body;
+  chatHistories.delete(sessionId);
+  res.json({ success: true });
+});
+
 // Socket.IO连接处理
 io.on('connection', (socket) => {
   console.log('用户连接:', socket.id);
