@@ -286,12 +286,19 @@ ${analysisData.map(g => `${g.groupName}: 总分${g.totalAvg}, ${g.avgScores.map(
     const message = data.choices?.[0]?.message || {};
     const raw = message.content || message.reasoning_content || '';
 
-    // 尝试解析JSON（非贪婪匹配）
+    // 尝试解析JSON（匹配完整JSON对象，支持嵌套）
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*?\}/);
-      if (jsonMatch) {
-        const report = JSON.parse(jsonMatch[0]);
-        return res.json({ report });
+      const start = raw.indexOf('{');
+      if (start !== -1) {
+        let depth = 0;
+        for (let i = start; i < raw.length; i++) {
+          if (raw[i] === '{') depth++;
+          if (raw[i] === '}') depth--;
+          if (depth === 0) {
+            const report = JSON.parse(raw.substring(start, i + 1));
+            return res.json({ report });
+          }
+        }
       }
     } catch (e) {
       console.error('JSON解析失败:', e);
