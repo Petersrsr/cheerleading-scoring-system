@@ -808,6 +808,9 @@
           <button onclick="generateReport()" class="btn btn-success" id="aiBtn">生成AI报告</button>
         </div>
         <div class="action-btn">
+          <button onclick="fillTestData()" class="btn btn-secondary" id="testDataBtn">一键填充测试数据</button>
+        </div>
+        <div class="action-btn">
           <button onclick="resetData()" class="btn btn-danger" id="resetBtn">清空所有数据</button>
         </div>
 
@@ -1059,6 +1062,33 @@
 
     function openDashboard() {
       window.open('dashboard.html', '_blank');
+    }
+
+    async function fillTestData() {
+      if (!sessionData || !sessionData.groups) {
+        alert('请先创建会话');
+        return;
+      }
+
+      const btn = document.getElementById('testDataBtn');
+      btn.disabled = true;
+      btn.textContent = '填充中...';
+
+      try {
+        const res = await fetch('/api/fill-test-data', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '填充失败');
+          return;
+        }
+        alert('测试数据已填充');
+        loadScores();
+      } catch (err) {
+        alert('填充失败: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '一键填充测试数据';
+      }
     }
 
     async function resetData() {

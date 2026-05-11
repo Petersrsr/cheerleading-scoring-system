@@ -86,6 +86,47 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true });
 });
 
+// 一键填充测试数据
+app.post('/api/fill-test-data', (req, res) => {
+  if (!session) {
+    return res.status(400).json({ error: '没有会话' });
+  }
+
+  const groups = session.groups;
+  const n = groups.length;
+
+  // 为每组生成其他组的评分数据
+  for (let target = 0; target < n; target++) {
+    for (let scorer = 0; scorer < n; scorer++) {
+      if (scorer === target) continue;
+      // 生成6-9分的随机评分
+      session.scores[target][scorer] = [
+        Math.floor(Math.random() * 4) + 6,  // 节拍清晰
+        Math.floor(Math.random() * 4) + 6,  // 层次变化准确
+        Math.floor(Math.random() * 4) + 6,  // 动作质量
+        Math.floor(Math.random() * 4) + 6,  // 音乐融合自然
+        Math.floor(Math.random() * 4) + 6   // 小组配合整齐
+      ];
+    }
+  }
+
+  // 为每组生成教师评分
+  for (let target = 0; target < n; target++) {
+    session.teacherScores[target] = [
+      Math.floor(Math.random() * 3) + 7,  // 节拍清晰 7-9
+      Math.floor(Math.random() * 3) + 7,  // 层次变化准确
+      Math.floor(Math.random() * 3) + 7,  // 动作质量
+      Math.floor(Math.random() * 3) + 7,  // 音乐融合自然
+      Math.floor(Math.random() * 3) + 7   // 小组配合整齐
+    ];
+  }
+
+  session.currentRound = n;
+
+  io.emit('scoreUpdate', {});
+  res.json({ success: true });
+});
+
 // 提交评分
 app.post('/api/score', (req, res) => {
   const { scorerGroup, targetGroup, scores } = req.body;
