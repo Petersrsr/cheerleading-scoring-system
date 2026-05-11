@@ -19,13 +19,18 @@ let session = null;
 function createSession(groups) {
   if (!Array.isArray(groups) || groups.length < 2) return null;
   const scores = {};
-  groups.forEach((_, i) => { scores[i] = {}; });
+  const teacherScores = {};
+  groups.forEach((_, i) => {
+    scores[i] = {};
+    teacherScores[i] = null; // 教师评分初始化为null
+  });
   session = {
     id: 'class1',
     groups,
     currentRound: 0,
     currentPerformer: -1,
     scores,
+    teacherScores,
     status: 'waiting',
     createdAt: new Date()
   };
@@ -117,6 +122,31 @@ app.post('/api/score', (req, res) => {
   res.json({ success: true });
 });
 
+// 教师评分
+app.post('/api/teacher-score', (req, res) => {
+  const { targetGroup, scores } = req.body;
+
+  if (!session) {
+    return res.status(400).json({ error: '没有会话' });
+  }
+
+  // 验证输入
+  if (typeof targetGroup !== 'number' || targetGroup < 0 || targetGroup >= session.groups.length) {
+    return res.status(400).json({ error: '无效的表演组' });
+  }
+  if (!Array.isArray(scores) || scores.length !== 5) {
+    return res.status(400).json({ error: '评分数据格式错误' });
+  }
+  if (scores.some(s => typeof s !== 'number' || s < 1 || s > 10 || !Number.isInteger(s))) {
+    return res.status(400).json({ error: '每项评分须为1-10的整数' });
+  }
+
+  session.teacherScores[targetGroup] = scores;
+
+  io.emit('scoreUpdate', { targetGroup });
+  res.json({ success: true });
+});
+
 // 开始新一轮
 app.post('/api/round', (req, res) => {
   const { performerIndex } = req.body;
@@ -164,6 +194,8 @@ app.get('/api/results', (req, res) => {
     return res.json({ session: null, results: [] });
   }
 
+  const dimensions = ['节奏感', '动作整齐度', '团队配合', '表现力', '创新性'];
+
   const results = session.groups.map((groupName, groupIndex) => {
     const scoresByOthers = Object.entries(session.scores[groupIndex] || {})
       .filter(([scorer]) => {
@@ -172,23 +204,46 @@ app.get('/api/results', (req, res) => {
       })
       .map(([, s]) => s);
 
-    if (scoresByOthers.length === 0) {
-      return { groupIndex, groupName, avgScores: null, totalAvg: 0 };
-    }
+    const teacherScore = session.teacherScores[groupIndex];
 
-    const dimensions = ['节奏感', '动作整齐度', '团队配合', '表现力', '创新性'];
-    const avgScores = dimensions.map((dim, dimIndex) => {
+    // 计算其他组平均分（每个维度）
+    const peerAvgScores = dimensions.map((dim, dimIndex) => {
       const dimScores = scoresByOthers.map(s => s[dimIndex] || 0);
       return {
         dimension: dim,
-        avg: dimScores.reduce((a, b) => a + b, 0) / dimScores.length,
+        avg: dimScores.length > 0 ? dimScores.reduce((a, b) => a + b, 0) / dimScores.length : 0,
         scores: dimScores
       };
     });
 
-    const totalAvg = avgScores.reduce((a, b) => a + b.avg, 0) / avgScores.length;
+    // 计算教师评分（每个维度）
+    const teacherAvgScores = dimensions.map((dim, dimIndex) => ({
+      dimension: dim,
+      score: teacherScore ? teacherScore[dimIndex] || 0 : 0
+    }));
 
-    return { groupIndex, groupName, avgScores, totalAvg };
+    // 计算加权总分：其他组平均分×60% + 教师评分×40%
+    const peerTotalAvg = peerAvgScores.reduce((a, b) => a + b.avg, 0) / peerAvgScores.length;
+    const teacherTotalAvg = teacherScore ? teacherAvgScores.reduce((a, b) => a + b.score, 0) / teacherAvgScores.length : 0;
+
+    // 加权计算：只有教师评分存在时才加权
+    let totalAvg;
+    if (teacherScore) {
+      totalAvg = peerTotalAvg * 0.6 + teacherTotalAvg * 0.4;
+    } else {
+      totalAvg = peerTotalAvg; // 没有教师评分时，只算其他组平均
+    }
+
+    return {
+      groupIndex,
+      groupName,
+      avgScores: peerAvgScores,
+      teacherScores: teacherAvgScores,
+      teacherHasScore: !!teacherScore,
+      peerTotalAvg,
+      teacherTotalAvg,
+      totalAvg
+    };
   });
 
   // 排名（深拷贝避免修改原数组）
