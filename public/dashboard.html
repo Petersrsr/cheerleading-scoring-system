@@ -63,6 +63,78 @@
       min-height: 0;
     }
 
+    /* 图表面板初始隐藏 */
+    .chart-panel,
+    .radar-panel {
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .chart-panel.visible,
+    .radar-panel.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* AI分析按钮 */
+    .ai-analyze-btn {
+      background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      color: #fff;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(233, 30, 140, 0.3);
+    }
+
+    .ai-analyze-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(233, 30, 140, 0.4);
+    }
+
+    .ai-analyze-btn:active {
+      transform: scale(0.98);
+    }
+
+    .ai-analyze-btn.analyzing {
+      background: linear-gradient(90deg, #e91e8c, #9c27b0, #e91e8c);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    /* 初始布局：左侧占满 */
+    .main-content.initial {
+      grid-template-columns: 1fr 1.6fr;
+      grid-template-rows: 1fr;
+    }
+
+    .main-content.initial .ranking-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .main-content.initial .ai-panel {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .main-content.initial .chart-panel,
+    .main-content.initial .radar-panel {
+      display: none;
+    }
+
     /* 面板通用样式 */
     .panel {
       background: #ffffff;
@@ -444,9 +516,9 @@
     </div>
 
     <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 左上: 柱状图 -->
-      <div class="panel chart-panel">
+    <div class="main-content initial" id="mainContent">
+      <!-- 左上: 柱状图（初始隐藏） -->
+      <div class="panel chart-panel" id="chartPanel">
         <div class="panel-header">
           <span class="panel-title">各组总分对比</span>
         </div>
@@ -455,8 +527,8 @@
         </div>
       </div>
 
-      <!-- 右上: 雷达图 -->
-      <div class="panel radar-panel">
+      <!-- 右上: 雷达图（初始隐藏） -->
+      <div class="panel radar-panel" id="radarPanel">
         <div class="panel-header">
           <span class="panel-title">各维度雷达图</span>
         </div>
@@ -465,15 +537,23 @@
         </div>
       </div>
 
-      <!-- 左下: 排名 -->
+      <!-- 左侧: 排名 -->
       <div class="panel ranking-panel">
         <div class="panel-header">
-          <span class="panel-title">排名</span>
+          <span class="panel-title">评分数据</span>
+          <button class="ai-analyze-btn" onclick="startAiAnalysis()" id="aiAnalyzeBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+            AI 智能分析
+          </button>
         </div>
         <div class="ranking-list" id="rankingList"></div>
       </div>
 
-      <!-- 右下: AI报告 -->
+      <!-- 右侧: AI报告 -->
       <div class="panel ai-panel">
         <div class="panel-header">
           <span class="panel-title">AI分析报告</span>
@@ -521,6 +601,40 @@
     // 语音输入
     let recognition = null;
     let isRecording = false;
+    let chartsVisible = false;
+
+    // AI智能分析触发
+    function startAiAnalysis() {
+      const btn = document.getElementById('aiAnalyzeBtn');
+      btn.classList.add('analyzing');
+      btn.disabled = true;
+
+      // 模拟AI分析过程
+      setTimeout(() => {
+        // 切换到完整布局
+        document.getElementById('mainContent').classList.remove('initial');
+
+        // 显示图表面板
+        setTimeout(() => {
+          document.getElementById('chartPanel').classList.add('visible');
+          document.getElementById('radarPanel').classList.add('visible');
+          chartsVisible = true;
+
+          btn.classList.remove('analyzing');
+          btn.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            分析完成
+          `;
+          btn.style.background = '#4caf50';
+
+          // 自动生成AI报告
+          generateReport();
+        }, 500);
+      }, 1500);
+    }
 
     function initVoice() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -539,6 +653,11 @@
           .map(result => result[0].transcript)
           .join('');
         document.getElementById('chatInput').value = transcript;
+
+        // 检测到"分析"关键词时触发AI分析
+        if (transcript.includes('分析') && !chartsVisible) {
+          startAiAnalysis();
+        }
       };
 
       recognition.onend = () => {
