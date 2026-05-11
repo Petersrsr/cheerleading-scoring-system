@@ -424,6 +424,29 @@
     .chat-msg.ai .chat-bubble { background: #fff; color: #333; border-bottom-left-radius: 4px; }
     .chat-msg.user .chat-bubble { background: #9c27b0; color: #fff; border-bottom-right-radius: 4px; }
 
+    /* 对比图表样式 */
+    .compare-table {
+      margin-top: 12px;
+    }
+
+    .compare-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .compare-table th {
+      padding: 8px;
+      text-align: left;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .compare-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 12px;
+    }
+
     .chat-input-area { display: flex; gap: 8px; }
 
     .chat-input {
@@ -740,8 +763,9 @@
         const res = await fetch('/api/results');
         if (!res.ok) return;
         const data = await res.json();
-        updateCharts(data.results || []);
-        updateRanking(data.results || []);
+        lastResults = data.results || [];
+        updateCharts(lastResults);
+        updateRanking(lastResults);
       } catch (err) {
         console.error('加载数据失败:', err);
       } finally {
@@ -988,6 +1012,23 @@
       sendBtn.disabled = true;
 
       appendMessage('user', msg);
+
+      // 检测是否是对比请求
+      const compareGroups = detectCompareRequest(msg);
+      if (compareGroups) {
+        const thinkingId = appendMessage('ai', '<span class="chat-thinking">正在生成对比图表...</span>', true);
+        try {
+          await generateCompareChart(compareGroups[0], compareGroups[1]);
+          removeMessage(thinkingId);
+        } catch (err) {
+          removeMessage(thinkingId);
+          appendMessage('ai', '生成对比图失败：' + err.message);
+        }
+        sendBtn.disabled = false;
+        input.focus();
+        return;
+      }
+
       const thinkingId = appendMessage('ai', '<span class="chat-thinking">思考中...</span>', true);
 
       try {
@@ -1011,6 +1052,109 @@
         sendBtn.disabled = false;
         input.focus();
       }
+    }
+
+    // 检测对比请求
+    function detectCompareRequest(msg) {
+      // 匹配 "对比A组和B组" 或 "比较A组 B组" 等
+      const patterns = [
+        /对比\s*(.+?)\s*和\s*(.+)/,
+        /比较\s*(.+?)\s*和\s*(.+)/,
+        /(.+?)\s*对比\s*(.+)/,
+        /(.+?)\s*比较\s*(.+)/,
+        /(.+?)\s*vs\s*(.+)/i,
+      ];
+
+      for (const p of patterns) {
+        const match = msg.match(p);
+        if (match) {
+          const groupNames = lastResults.map(r => r.groupName);
+          const g1 = groupNames.find(n => match[1].includes(n));
+          const g2 = groupNames.find(n => match[2].includes(n));
+          if (g1 && g2 && g1 !== g2) {
+            return [g1, g2];
+          }
+        }
+      }
+      return null;
+    }
+
+    // 存储最新结果
+    let lastResults = [];
+
+    // 生成对比图表
+    async function generateCompareChart(group1Name, group2Name) {
+      const g1 = lastResults.find(r => r.groupName === group1Name);
+      const g2 = lastResults.find(r => r.groupName === group2Name);
+      if (!g1 || !g2) throw new Error('未找到对比组数据');
+
+      const container = document.getElementById('chatMessages');
+      const chartId = 'compare-' + Date.now();
+
+      // 创建图表容器
+      container.innerHTML += `
+        <div class="chat-msg ai">
+          <div class="chat-avatar">&#129302;</div>
+          <div class="chat-bubble" style="width:90%;max-width:90%;">
+            <div style="font-weight:600;margin-bottom:10px;">${esc(group1Name)} vs ${esc(group2Name)} 维度对比</div>
+            <canvas id="${chartId}" height="200"></canvas>
+            <div class="compare-table" id="${chartId}-table"></div>
+          </div>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+
+      // 生成图表
+      const ctx = document.getElementById(chartId).getContext('2d');
+      const dimensions = g1.avgScores.map(d => d.dimension);
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dimensions,
+          datasets: [
+            {
+              label: group1Name,
+              data: g1.avgScores.map(d => d.avg),
+              backgroundColor: 'rgba(233, 30, 140, 0.7)',
+              borderColor: 'rgba(233, 30, 140, 1)',
+              borderWidth: 2,
+              borderRadius: 6
+            },
+            {
+              label: group2Name,
+              data: g2.avgScores.map(d => d.avg),
+              backgroundColor: 'rgba(156, 39, 176, 0.7)',
+              borderColor: 'rgba(156, 39, 176, 1)',
+              borderWidth: 2,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' } },
+            x: { grid: { display: false } }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 12 } } }
+          }
+        }
+      });
+
+      // 生成对比表格
+      const tableEl = document.getElementById(chartId + '-table');
+      let tableHtml = '<table style="width:100%;margin-top:12px;font-size:13px;border-collapse:collapse;">';
+      tableHtml += '<tr style="background:#f5f5f7;"><th style="padding:8px;text-align:left;">维度</th><th style="padding:8px;">' + esc(group1Name) + '</th><th style="padding:8px;">' + esc(group2Name) + '</th><th style="padding:8px;">差距</th></tr>';
+      g1.avgScores.forEach((d, i) => {
+        const diff = (d.avg - g2.avgScores[i].avg).toFixed(1);
+        const diffColor = diff > 0 ? '#4caf50' : diff < 0 ? '#ff5722' : '#999';
+        const diffText = diff > 0 ? '+' + diff : diff;
+        tableHtml += `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">${esc(d.dimension)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;">${d.avg.toFixed(1)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;">${g2.avgScores[i].avg.toFixed(1)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;color:${diffColor};font-weight:600;">${diffText}</td></tr>`;
+      });
+      tableHtml += '</table>';
+      tableEl.innerHTML = tableHtml;
     }
 
     function appendMessage(role, content, isTemp) {
