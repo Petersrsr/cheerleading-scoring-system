@@ -194,7 +194,7 @@ app.get('/api/results', (req, res) => {
     return res.json({ session: null, results: [] });
   }
 
-  const dimensions = ['节奏感', '动作整齐度', '团队配合', '表现力', '创新性'];
+  const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
 
   const results = session.groups.map((groupName, groupIndex) => {
     const scoresByOthers = Object.entries(session.scores[groupIndex] || {})
@@ -275,7 +275,7 @@ app.post('/api/analyze', async (req, res) => {
 
     if (scoresByOthers.length === 0) return null;
 
-    const dimensions = ['节奏感', '动作整齐度', '团队配合', '表现力', '创新性'];
+    const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
     const avgScores = dimensions.map((dim, dimIndex) => {
       const dimScores = scoresByOthers.map(s => s[dimIndex] || 0);
       return {
