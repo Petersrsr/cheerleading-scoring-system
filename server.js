@@ -229,6 +229,22 @@ app.post('/api/endRound', (req, res) => {
   res.json({ success: true });
 });
 
+// 荣誉标签数据
+const BADGES = {
+  '节拍清晰': ['人体节拍器', '节奏大师', '卡点天花板', '自带精准节拍', '韵律教科书', '全员神卡点'],
+  '层次变化准确': ['层次变换王者', '层次切换大师', '层次衔接教科书', '动作行云流水'],
+  '动作质量': ['动作质感拉满', '力量感爆棚', '标准动作范本', '肢体控制王者', '利落范儿十足'],
+  '音乐融合自然': ['乐舞浑然天成', '氛围感天花板', '曲风完美适配', '沉浸式音乐演绎', '自带音乐律动'],
+  '小组配合整齐': ['全员复制粘贴', '整齐划一范本', '团队默契天花板', '集体同步王者', '小组配合顶配']
+};
+
+// 随机获取一个标签
+function getRandomBadge(dimension) {
+  const badges = BADGES[dimension];
+  if (!badges) return null;
+  return badges[Math.floor(Math.random() * badges.length)];
+}
+
 // 获取结果数据
 app.get('/api/results', (req, res) => {
   if (!session) {
@@ -275,6 +291,19 @@ app.get('/api/results', (req, res) => {
       totalAvg = peerTotalAvg; // 没有教师评分时，只算其他组平均
     }
 
+    // 计算荣誉标签（加权平均分 > 6 分的维度）
+    const badges = [];
+    peerAvgScores.forEach((dim, dimIndex) => {
+      const teacherDimScore = teacherScore ? teacherScore[dimIndex] || 0 : 0;
+      const weightedAvg = teacherScore ? dim.avg * 0.6 + teacherDimScore * 0.4 : dim.avg;
+      if (weightedAvg > 6) {
+        const badge = getRandomBadge(dim.dimension);
+        if (badge) {
+          badges.push({ dimension: dim.dimension, badge, score: weightedAvg });
+        }
+      }
+    });
+
     return {
       groupIndex,
       groupName,
@@ -283,7 +312,8 @@ app.get('/api/results', (req, res) => {
       teacherHasScore: !!teacherScore,
       peerTotalAvg,
       teacherTotalAvg,
-      totalAvg
+      totalAvg,
+      badges
     };
   });
 

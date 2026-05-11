@@ -247,6 +247,39 @@
       margin-top: 2px;
     }
 
+    .rank-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .honor-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: linear-gradient(135deg, #fff9c4, #fff176);
+      border: 1px solid #ffd54f;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #f57f17;
+      animation: badgePop 0.3s ease-out;
+      cursor: help;
+    }
+
+    .honor-tag:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(255, 213, 79, 0.5);
+    }
+
+    @keyframes badgePop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     .rank-score {
       font-size: 24px;
       font-weight: 600;
@@ -847,6 +880,11 @@
             <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
             <div class="rank-teacher">${r.teacherHasScore ? '教师评分: ' + r.teacherTotalAvg.toFixed(1) : '教师未评'}</div>
             ${r.teacherHasScore ? '<div class="rank-weight">其他组60% + 教师40%</div>' : ''}
+            ${r.badges && r.badges.length > 0 ? `
+              <div class="rank-badges">
+                ${r.badges.map(b => `<span class="honor-tag" title="${esc(b.dimension)}: ${b.score.toFixed(1)}分">🏆 ${esc(b.badge)}</span>`).join('')}
+              </div>
+            ` : ''}
           </div>
           <div class="rank-score">${r.totalAvg ? r.totalAvg.toFixed(2) : '-'}</div>
         </div>
