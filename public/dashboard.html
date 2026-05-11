@@ -733,6 +733,27 @@
       const barCtx = document.getElementById('barChart').getContext('2d');
       if (barChart) barChart.destroy();
 
+      // 自定义插件：在柱子上方显示数值
+      const barLabelPlugin = {
+        id: 'barLabel',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((element, index) => {
+              const data = dataset.data[index];
+              if (data > 0) {
+                ctx.fillStyle = '#1d1d1f';
+                ctx.font = 'bold 16px SF Pro Text, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(data.toFixed(1), element.x, element.y - 6);
+              }
+            });
+          });
+        }
+      };
+
       barChart = new Chart(barCtx, {
         type: 'bar',
         data: {
@@ -746,6 +767,7 @@
             borderRadius: 8
           }]
         },
+        plugins: [barLabelPlugin],
         options: {
           responsive: true,
           maintainAspectRatio: false,
