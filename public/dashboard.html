@@ -158,10 +158,10 @@
       display: flex; align-items: center; justify-content: center;
       font-weight: 600; font-size: 16px; color: #fff; margin-right: 14px; flex-shrink: 0;
     }
-    .rank-1 { background: linear-gradient(135deg, #ff9800, #f57c00); }
-    .rank-2 { background: linear-gradient(135deg, #2196f3, #1976d2); }
-    .rank-3 { background: linear-gradient(135deg, #4caf50, #388e3c); }
-    .rank-4 { background: linear-gradient(135deg, #9c27b0, #7b1fa2); }
+    .group-0 { background: linear-gradient(135deg, #2196f3, #1976d2); }
+    .group-1 { background: linear-gradient(135deg, #ff9800, #f57c00); }
+    .group-2 { background: linear-gradient(135deg, #4caf50, #388e3c); }
+    .group-3 { background: linear-gradient(135deg, #9c27b0, #7b1fa2); }
     .rank-info { flex: 1; }
     .rank-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
     .rank-details { font-size: 13px; color: #7a7a7a; }
@@ -555,10 +555,22 @@
       const radarCtx = document.getElementById('radarChart').getContext('2d');
       if (radarChart) radarChart.destroy();
       const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
+
+      // 动态计算刻度范围，放大差异
+      let allScores = [];
+      results.forEach(r => {
+        if (r.avgScores) r.avgScores.forEach(d => allScores.push(d.avg));
+      });
+      const minScore = allScores.length > 0 ? Math.floor(Math.min(...allScores) - 0.5) : 0;
+      const maxScore = allScores.length > 0 ? Math.ceil(Math.max(...allScores) + 0.5) : 10;
+      const radarMin = Math.max(0, minScore);
+      const radarMax = Math.min(10, maxScore);
+      const stepSize = radarMax - radarMin <= 2 ? 0.5 : 1;
+
       radarChart = new Chart(radarCtx, {
         type: 'radar',
-        data: { labels: dimensions, datasets: results.map(r => ({ label: r.groupName, data: r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0], backgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].light, borderColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, borderWidth: 2, pointBackgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, pointRadius: 4 })) },
-        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 10, grid: { color: '#e0e0e0' }, angleLines: { color: '#e0e0e0' }, pointLabels: { font: { size: 14, weight: '500' } }, ticks: { font: { size: 12 }, stepSize: 2 } } }, plugins: { legend: { position: 'bottom', labels: { font: { size: 13 }, padding: 16, usePointStyle: true } } } }
+        data: { labels: dimensions, datasets: results.map(r => ({ label: r.groupName, data: r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0], backgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].light, borderColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, borderWidth: 2.5, pointBackgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, pointRadius: 5 })) },
+        options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: radarMin, max: radarMax, grid: { color: '#e0e0e0' }, angleLines: { color: '#e0e0e0' }, pointLabels: { font: { size: 14, weight: '500' } }, ticks: { font: { size: 12 }, stepSize: stepSize, backdropColor: 'transparent' } } }, plugins: { legend: { position: 'bottom', labels: { font: { size: 13 }, padding: 16, usePointStyle: true } } } }
       });
     }
 
@@ -566,7 +578,7 @@
       badgesShown = false;
       document.getElementById('rankingList').innerHTML = results.map((r) => `
         <div class="ranking-item">
-          <div class="rank-badge rank-${r.rank}">${r.rank}</div>
+          <div class="rank-badge group-${r.groupIndex}">${r.rank}</div>
           <div class="rank-info">
             <div class="rank-name">${esc(r.groupName)}</div>
             <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
