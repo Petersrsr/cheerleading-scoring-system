@@ -167,6 +167,13 @@
     .rank-details { font-size: 13px; color: #7a7a7a; }
     .rank-teacher { font-size: 12px; color: #e91e8c; font-weight: 600; margin-top: 4px; }
     .rank-weight { font-size: 11px; color: #999; margin-top: 2px; }
+    .rank-badges { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .badge-tag {
+      display: inline-block; padding: 3px 10px;
+      background: linear-gradient(135deg, #fff7e6, #fff1cc);
+      border: 1px solid #ffd700; border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: #b8860b;
+    }
     .rank-score { font-size: 24px; font-weight: 600; color: #e91e8c; }
 
     /* AI报告 */
@@ -517,6 +524,7 @@
             <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
             <div class="rank-teacher">${r.teacherHasScore ? '教师评分: ' + r.teacherTotalAvg.toFixed(1) : '教师未评'}</div>
             ${r.teacherHasScore ? '<div class="rank-weight">其他组60% + 教师40%</div>' : ''}
+            ${r.badges && r.badges.length > 0 ? `<div class="rank-badges">${r.badges.map(b => `<span class="badge-tag">🏆 ${esc(b.badge)}</span>`).join('')}</div>` : ''}
           </div>
           <div class="rank-score">${r.totalAvg ? r.totalAvg.toFixed(2) : '-'}</div>
         </div>
