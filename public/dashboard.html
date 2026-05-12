@@ -216,24 +216,6 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
-    /* AI评价按钮 */
-    .ai-eval-btn {
-      flex-shrink: 0; margin-top: 8px;
-      width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
-      background: linear-gradient(135deg, #ff9800, #f57c00);
-      color: #fff; border: none; border-radius: 12px;
-      cursor: pointer; transition: all 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .ai-eval-btn:hover { transform: translateY(-1px); }
-    .ai-eval-btn.analyzing {
-      background: linear-gradient(90deg, #ff9800, #f57c00, #ff9800);
-      background-size: 200% 100%; animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: 100% 0; }
-      100% { background-position: -100% 0; }
-    }
     .rank-score { font-size: 24px; font-weight: 600; color: #e91e8c; }
 
     /* AI报告 */
