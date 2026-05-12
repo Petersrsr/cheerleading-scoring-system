@@ -167,12 +167,46 @@
     .rank-details { font-size: 13px; color: #7a7a7a; }
     .rank-teacher { font-size: 12px; color: #e91e8c; font-weight: 600; margin-top: 4px; }
     .rank-weight { font-size: 11px; color: #999; margin-top: 2px; }
-    .rank-badges { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .rank-badges {
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;
+      opacity: 0; max-height: 0; overflow: hidden;
+      transition: all 0.5s ease;
+    }
+    .rank-badges.visible {
+      opacity: 1; max-height: 200px;
+    }
     .badge-tag {
-      display: inline-block; padding: 3px 10px;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 14px;
       background: linear-gradient(135deg, #fff7e6, #fff1cc);
-      border: 1px solid #ffd700; border-radius: 20px;
-      font-size: 12px; font-weight: 600; color: #b8860b;
+      border: 2px solid #ffd700; border-radius: 24px;
+      font-size: 15px; font-weight: 700; color: #b8860b;
+      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+      animation: badgePop 0.4s ease-out;
+    }
+    @keyframes badgePop {
+      0% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* AI评价按钮 */
+    .ai-eval-btn {
+      flex-shrink: 0; margin-top: 8px;
+      width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: #fff; border: none; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .ai-eval-btn:hover { transform: translateY(-1px); }
+    .ai-eval-btn.analyzing {
+      background: linear-gradient(90deg, #ff9800, #f57c00, #ff9800);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
     }
     .rank-score { font-size: 24px; font-weight: 600; color: #e91e8c; }
 
@@ -292,6 +326,9 @@
           <div class="panel-header"><span class="panel-title">排名</span></div>
           <div class="ranking-list" id="rankingList"></div>
         </div>
+        <button class="ai-eval-btn" onclick="triggerAiEval()" id="aiEvalBtn">
+          <span>&#129302;</span> AI评价
+        </button>
         <button class="ai-report-btn" onclick="openChat()">AI报告</button>
       </div>
     </div>
@@ -516,6 +553,7 @@
     }
 
     function updateRanking(results) {
+      badgesShown = false;
       document.getElementById('rankingList').innerHTML = results.map((r) => `
         <div class="ranking-item">
           <div class="rank-badge rank-${r.rank}">${r.rank}</div>
@@ -524,11 +562,38 @@
             <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
             <div class="rank-teacher">${r.teacherHasScore ? '教师评分: ' + r.teacherTotalAvg.toFixed(1) : '教师未评'}</div>
             ${r.teacherHasScore ? '<div class="rank-weight">其他组60% + 教师40%</div>' : ''}
-            ${r.badges && r.badges.length > 0 ? `<div class="rank-badges">${r.badges.map(b => `<span class="badge-tag">🏆 ${esc(b.badge)}</span>`).join('')}</div>` : ''}
+            ${r.badges && r.badges.length > 0 ? `<div class="rank-badges" data-badges>${r.badges.map(b => `<span class="badge-tag">🏆 ${esc(b.badge)}</span>`).join('')}</div>` : ''}
           </div>
           <div class="rank-score">${r.totalAvg ? r.totalAvg.toFixed(2) : '-'}</div>
         </div>
       `).join('');
+    }
+
+    // AI评价 - 显示荣誉标签
+    let badgesShown = false;
+
+    function triggerAiEval() {
+      if (badgesShown) return;
+
+      const btn = document.getElementById('aiEvalBtn');
+      btn.classList.add('analyzing');
+      btn.disabled = true;
+
+      // 模拟AI分析过程
+      setTimeout(() => {
+        // 逐个显示各组的荣誉标签
+        const badgeEls = document.querySelectorAll('[data-badges]');
+        badgeEls.forEach((el, i) => {
+          setTimeout(() => {
+            el.classList.add('visible');
+          }, i * 300);
+        });
+
+        btn.classList.remove('analyzing');
+        btn.innerHTML = '<span>&#10004;</span> 评价完成';
+        btn.style.background = '#4caf50';
+        badgesShown = true;
+      }, 1500);
     }
 
     // ===== AI报告与对话 =====
