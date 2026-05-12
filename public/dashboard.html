@@ -158,10 +158,10 @@
       display: flex; align-items: center; justify-content: center;
       font-weight: 600; font-size: 16px; color: #fff; margin-right: 14px; flex-shrink: 0;
     }
-    .rank-1 { background: linear-gradient(135deg, #ff9500, #ff6b00); }
-    .rank-2 { background: linear-gradient(135deg, #8e8e93, #636366); }
-    .rank-3 { background: linear-gradient(135deg, #a2845e, #896a46); }
-    .rank-4 { background: #e91e8c; }
+    .rank-1 { background: linear-gradient(135deg, #ff9800, #f57c00); }
+    .rank-2 { background: linear-gradient(135deg, #2196f3, #1976d2); }
+    .rank-3 { background: linear-gradient(135deg, #4caf50, #388e3c); }
+    .rank-4 { background: linear-gradient(135deg, #9c27b0, #7b1fa2); }
     .rank-info { flex: 1; }
     .rank-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
     .rank-details { font-size: 13px; color: #7a7a7a; }
@@ -418,10 +418,10 @@
         const borderColors = [];
 
         const palette = [
-          { bg: 'rgba(233,30,140,0.85)', border: 'rgba(233,30,140,1)' },
-          { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' },
-          { bg: 'rgba(255,193,7,0.85)', border: 'rgba(255,193,7,1)' },
-          { bg: 'rgba(103,58,183,0.85)', border: 'rgba(103,58,183,1)' }
+          { bg: 'rgba(33,150,243,0.85)', border: 'rgba(33,150,243,1)' },
+          { bg: 'rgba(255,152,0,0.85)', border: 'rgba(255,152,0,1)' },
+          { bg: 'rgba(76,175,80,0.85)', border: 'rgba(76,175,80,1)' },
+          { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' }
         ];
 
         data.peerScores.forEach((ps, i) => {
@@ -522,10 +522,10 @@
       const labels = results.map(r => r.groupName);
       const totals = results.map(r => r.totalAvg || 0);
       const colors = [
-        { bg: 'rgba(233,30,140,0.85)', border: 'rgba(233,30,140,1)' },
-        { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' },
-        { bg: 'rgba(255,193,7,0.85)', border: 'rgba(255,193,7,1)' },
-        { bg: 'rgba(233,30,99,0.85)', border: 'rgba(233,30,99,1)' }
+        { bg: 'rgba(33,150,243,0.85)', border: 'rgba(33,150,243,1)' },
+        { bg: 'rgba(255,152,0,0.85)', border: 'rgba(255,152,0,1)' },
+        { bg: 'rgba(76,175,80,0.85)', border: 'rgba(76,175,80,1)' },
+        { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' }
       ];
 
       const barCtx = document.getElementById('barChart').getContext('2d');
@@ -539,10 +539,10 @@
       const radarCtx = document.getElementById('radarChart').getContext('2d');
       if (radarChart) radarChart.destroy();
       const radarColors = [
-        { bg: 'rgba(233,30,140,0.15)', border: 'rgba(233,30,140,1)' },
-        { bg: 'rgba(156,39,176,0.15)', border: 'rgba(156,39,176,1)' },
-        { bg: 'rgba(255,193,7,0.15)', border: 'rgba(255,193,7,1)' },
-        { bg: 'rgba(233,30,99,0.15)', border: 'rgba(233,30,99,1)' }
+        { bg: 'rgba(33,150,243,0.15)', border: 'rgba(33,150,243,1)' },
+        { bg: 'rgba(255,152,0,0.15)', border: 'rgba(255,152,0,1)' },
+        { bg: 'rgba(76,175,80,0.15)', border: 'rgba(76,175,80,1)' },
+        { bg: 'rgba(156,39,176,0.15)', border: 'rgba(156,39,176,1)' }
       ];
       const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
       radarChart = new Chart(radarCtx, {
