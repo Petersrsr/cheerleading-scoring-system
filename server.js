@@ -225,8 +225,56 @@ app.post('/api/endRound', (req, res) => {
   }
 
   session.status = 'waiting';
-  io.emit('roundEnd');
+  io.emit('roundEnd', {
+    performerIndex: session.currentPerformer,
+    performerName: session.groups[session.currentPerformer]
+  });
   res.json({ success: true });
+});
+
+// 获取当前表演组的评分明细（用于大屏展示）
+app.get('/api/performance/:groupIndex', (req, res) => {
+  if (!session) {
+    return res.status(400).json({ error: '没有会话' });
+  }
+
+  const groupIndex = parseInt(req.params.groupIndex);
+  if (groupIndex < 0 || groupIndex >= session.groups.length) {
+    return res.status(400).json({ error: '无效的组索引' });
+  }
+
+  const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
+  const groupName = session.groups[groupIndex];
+
+  // 其他组对该组的评分（每组总平均）
+  const peerScores = [];
+  for (let i = 0; i < session.groups.length; i++) {
+    if (i === groupIndex) continue;
+    const scores = session.scores[groupIndex]?.[i];
+    if (scores) {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      peerScores.push({ name: session.groups[i], avg: parseFloat(avg.toFixed(2)), scores });
+    }
+  }
+
+  // 教师评分
+  const teacherScores = session.teacherScores[groupIndex];
+  let teacherAvg = 0;
+  if (teacherScores) {
+    teacherAvg = teacherScores.reduce((a, b) => a + b, 0) / teacherScores.length;
+  }
+
+  // 判断是否所有组都评完分
+  const allRoundsDone = session.currentRound >= session.groups.length && session.status === 'waiting';
+
+  res.json({
+    groupName,
+    groupIndex,
+    peerScores,
+    teacherScore: teacherScores ? { name: '教师评分', avg: parseFloat(teacherAvg.toFixed(2)), scores: teacherScores } : null,
+    allRoundsDone,
+    dimensions
+  });
 });
 
 // 荣誉标签数据

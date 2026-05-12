@@ -6,628 +6,234 @@
   <title>啦啦操评分数据大屏</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    /* 全屏16:9布局 - 无需滚动 */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #fce4f3;
-      color: #1d1d1f;
+      width: 100vw; height: 100vh; overflow: hidden;
+      font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, sans-serif;
+      background: #fce4f3; color: #1d1d1f;
     }
 
-    /* 主容器 - 填满整个屏幕 */
-    .dashboard {
-      width: 100vw;
-      height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      grid-template-columns: 1fr;
-    }
+    .dashboard { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
 
-    /* 顶部标题栏 */
     .header {
       background: linear-gradient(135deg, #e91e8c, #9c27b0);
-      color: #ffffff;
-      padding: 16px 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: #fff; padding: 16px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 28px; font-weight: 600; }
+    .header .subtitle { font-size: 16px; color: rgba(255,255,255,0.8); }
+
+    /* ========== 表演模式 ========== */
+    .performance-mode {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 30px 60px; gap: 20px;
+    }
+    .performance-mode.hidden { display: none; }
+
+    .perf-title {
+      text-align: center; flex-shrink: 0;
+    }
+    .perf-title h2 {
+      font-size: 42px; font-weight: 700; color: #9c27b0;
+      letter-spacing: 2px;
+    }
+    .perf-title .perf-subtitle {
+      font-size: 18px; color: #7a7a7a; margin-top: 6px;
     }
 
-    .header h1 {
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.28px;
+    .perf-chart-area {
+      flex: 1; background: #fff; border-radius: 16px; padding: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      position: relative;
     }
+    .perf-chart-area canvas { width: 100% !important; height: 100% !important; }
 
-    .header .subtitle {
-      font-size: 16px;
-      color: #999;
-      font-weight: 400;
+    .perf-waiting {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
     }
+    .perf-waiting .icon { font-size: 64px; }
+    .perf-waiting p { font-size: 22px; color: #7a7a7a; }
 
-    /* 主内容区 - 三列布局 */
-    .main-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1.6fr;
-      grid-template-rows: 1fr 1fr;
-      gap: 20px;
-      padding: 20px 40px 30px;
-      min-height: 0;
-    }
-
-    /* 图表面板初始隐藏 */
-    .chart-panel,
-    .radar-panel {
-      opacity: 0;
-      transform: scale(0.9);
-      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .chart-panel.visible,
-    .radar-panel.visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    /* AI分析按钮 */
-    .ai-analyze-btn {
+    .result-btn {
+      padding: 18px 48px; font-size: 22px; font-weight: 600;
       background: linear-gradient(135deg, #e91e8c, #9c27b0);
-      color: #fff;
-      border: none;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-size: 18px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: all 0.3s;
+      color: #fff; border: none; border-radius: 16px;
+      cursor: pointer; transition: all 0.2s;
       box-shadow: 0 4px 20px rgba(233, 30, 140, 0.3);
     }
+    .result-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(233, 30, 140, 0.4); }
 
-    .ai-analyze-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(233, 30, 140, 0.4);
-    }
-
-    .ai-analyze-btn:active {
-      transform: scale(0.98);
-    }
-
-    .ai-analyze-btn.analyzing {
-      background: linear-gradient(90deg, #e91e8c, #9c27b0, #e91e8c);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 100% 0; }
-      100% { background-position: -100% 0; }
-    }
-
-    /* 初始布局：左侧占满 */
-    .main-content.initial {
-      grid-template-columns: 1fr 1.6fr;
-      grid-template-rows: 1fr;
-    }
-
-    .main-content.initial .ranking-panel {
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    .main-content.initial .ai-panel {
-      grid-column: 2;
-      grid-row: 1;
-    }
-
-    .main-content.initial .chart-panel,
-    .main-content.initial .radar-panel {
-      display: none;
-    }
-
-    /* 面板通用样式 */
-    .panel {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+    /* ========== 分析模式 ========== */
+    .analysis-mode {
+      flex: 1; display: none; flex-direction: column;
+      padding: 20px 40px 30px; gap: 20px;
       overflow: hidden;
     }
+    .analysis-mode.visible { display: flex; }
 
+    .analysis-grid {
+      flex: 1; display: grid;
+      grid-template-columns: 1fr 1fr 1.6fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 20px; min-height: 0;
+    }
+
+    .panel {
+      background: #fff; border-radius: 12px; padding: 20px;
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
     .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-shrink: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; flex-shrink: 0;
     }
+    .panel-title { font-size: 18px; font-weight: 600; }
 
-    .panel-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1d1d1f;
-    }
+    .chart-panel { grid-column: 1; grid-row: 1; }
+    .radar-panel { grid-column: 2; grid-row: 1; }
+    .ranking-panel { grid-column: 1 / 3; grid-row: 2; }
+    .ai-panel { grid-column: 3; grid-row: 1 / 3; }
 
-    /* 图表面板 */
-    .chart-panel {
-      grid-column: 1;
-      grid-row: 1;
-    }
+    .chart-wrapper { flex: 1; position: relative; min-height: 0; }
+    .chart-wrapper canvas { width: 100% !important; height: 100% !important; }
 
-    .radar-panel {
-      grid-column: 2;
-      grid-row: 1;
-    }
-
-    /* 排名面板 */
-    .ranking-panel {
-      grid-column: 1 / 3;
-      grid-row: 2;
-    }
-
-    /* AI报告面板 */
-    .ai-panel {
-      grid-column: 3;
-      grid-row: 1 / 3;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* 排名列表 */
-    .ranking-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-
+    /* 排名 */
+    .ranking-list { flex: 1; overflow-y: auto; }
     .ranking-item {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
-      background: #f5f5f7;
-      border-radius: 10px;
-      margin-bottom: 10px;
+      display: flex; align-items: center; padding: 12px 16px;
+      background: #f5f5f7; border-radius: 10px; margin-bottom: 10px;
     }
-
     .rank-badge {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 16px;
-      color: #fff;
-      margin-right: 14px;
-      flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 16px; color: #fff; margin-right: 14px; flex-shrink: 0;
     }
-
     .rank-1 { background: linear-gradient(135deg, #ff9500, #ff6b00); }
     .rank-2 { background: linear-gradient(135deg, #8e8e93, #636366); }
     .rank-3 { background: linear-gradient(135deg, #a2845e, #896a46); }
     .rank-4 { background: #e91e8c; }
-
-    .rank-info {
-      flex: 1;
-    }
-
-    .rank-name {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .rank-details {
-      font-size: 13px;
-      color: #7a7a7a;
-    }
-
-    .rank-teacher {
-      font-size: 12px;
-      color: #e91e8c;
-      font-weight: 600;
-      margin-top: 4px;
-    }
-
-    .rank-weight {
-      font-size: 11px;
-      color: #999;
-      margin-top: 2px;
-    }
-
-    .rank-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .honor-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      background: linear-gradient(135deg, #fff9c4, #fff176);
-      border: 1px solid #ffd54f;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #f57f17;
-      animation: badgePop 0.3s ease-out;
-      cursor: help;
-    }
-
-    .honor-tag:hover {
-      transform: scale(1.05);
-      box-shadow: 0 2px 8px rgba(255, 213, 79, 0.5);
-    }
-
-    @keyframes badgePop {
-      0% { transform: scale(0); opacity: 0; }
-      50% { transform: scale(1.2); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .rank-score {
-      font-size: 24px;
-      font-weight: 600;
-      color: #e91e8c;
-    }
+    .rank-info { flex: 1; }
+    .rank-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .rank-details { font-size: 13px; color: #7a7a7a; }
+    .rank-teacher { font-size: 12px; color: #e91e8c; font-weight: 600; margin-top: 4px; }
+    .rank-weight { font-size: 11px; color: #999; margin-top: 2px; }
+    .rank-score { font-size: 24px; font-weight: 600; color: #e91e8c; }
 
     /* AI报告 */
-    .ai-content {
-      flex: 1;
-      overflow-y: auto;
-      font-size: 14px;
-      line-height: 1.7;
-      color: #1d1d1f;
-    }
-
-    .ai-content::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .ai-content::-webkit-scrollbar-thumb {
-      background: #d2d2d7;
-      border-radius: 2px;
-    }
-
-    /* 结构化报告样式 */
-    .report-section {
-      margin-bottom: 16px;
-    }
-
-    .report-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #9c27b0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .report-text {
-      font-size: 14px;
-      color: #333;
-      line-height: 1.6;
-      padding: 10px 14px;
-      background: #f5f5f7;
-      border-radius: 8px;
-    }
-
-    .report-group {
-      background: #f5f5f7;
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-
-    .report-group-name {
-      font-size: 15px;
-      font-weight: 600;
-      color: #1d1d1f;
-      margin-bottom: 8px;
-    }
-
-    .report-row {
-      font-size: 13px;
-      color: #333;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      line-height: 1.5;
-    }
-
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      flex-shrink: 0;
-    }
-
-    .tag-green {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .tag-orange {
-      background: #ffedd5;
-      color: #9a3412;
-    }
-
-    /* 对话界面样式 */
-    .chat-section {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
+    .chat-section { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px;
-      background: #f5f5f7;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      min-height: 300px;
+      flex: 1; overflow-y: auto; padding: 12px;
+      background: #f5f5f7; border-radius: 10px; margin-bottom: 12px; min-height: 200px;
     }
-
     .chat-messages::-webkit-scrollbar { width: 4px; }
     .chat-messages::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 2px; }
-
-    .chat-msg {
-      margin-bottom: 12px;
-      display: flex;
-      gap: 8px;
-    }
-
+    .chat-msg { margin-bottom: 12px; display: flex; gap: 8px; }
     .chat-msg.user { flex-direction: row-reverse; }
-
     .chat-avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
     }
-
     .chat-msg.ai .chat-avatar { background: linear-gradient(135deg, #f093fb, #f5576c); }
     .chat-msg.user .chat-avatar { background: #9c27b0; color: #fff; }
-
-    .chat-bubble {
-      max-width: 85%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
+    .chat-bubble { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
     .chat-msg.ai .chat-bubble { background: #fff; color: #333; border-bottom-left-radius: 4px; }
     .chat-msg.user .chat-bubble { background: #9c27b0; color: #fff; border-bottom-right-radius: 4px; }
-
-    /* 对比图表样式 */
-    .compare-table {
-      margin-top: 12px;
-    }
-
-    .compare-table table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .compare-table th {
-      padding: 8px;
-      text-align: left;
-      font-size: 12px;
-      color: #666;
-    }
-
-    .compare-table td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #eee;
-      font-size: 12px;
-    }
-
     .chat-input-area { display: flex; gap: 8px; }
-
     .chat-input {
-      flex: 1;
-      padding: 8px 14px;
-      border: 1px solid #e0e0e0;
-      border-radius: 20px;
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
+      flex: 1; padding: 8px 14px; border: 1px solid #e0e0e0;
+      border-radius: 20px; font-size: 13px; font-family: inherit; outline: none;
     }
-
     .chat-input:focus { border-color: #9c27b0; }
-
     .chat-send-btn {
-      padding: 8px 16px;
-      background: linear-gradient(135deg, #f093fb, #f5576c);
-      color: #fff;
-      border: none;
-      border-radius: 20px;
-      font-size: 13px;
-      cursor: pointer;
+      padding: 8px 16px; background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff; border: none; border-radius: 20px; font-size: 13px; cursor: pointer;
     }
-
     .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .chat-thinking { color: #999; font-style: italic; }
 
-    /* 语音按钮 */
     .voice-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1px solid #e0e0e0;
-      background: #fff;
-      color: #666;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid #e0e0e0; background: #fff; color: #666;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; flex-shrink: 0;
     }
-
-    .voice-btn:hover {
-      border-color: #9c27b0;
-      color: #9c27b0;
-    }
-
+    .voice-btn:hover { border-color: #9c27b0; color: #9c27b0; }
     .voice-btn.recording {
-      background: #ff3b30;
-      border-color: #ff3b30;
-      color: #fff;
+      background: #ff3b30; border-color: #ff3b30; color: #fff;
       animation: pulse 1.5s infinite;
     }
-
     @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(255,59,48,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); }
     }
 
-    .voice-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .report-section { margin-bottom: 16px; }
+    .report-label { font-size: 13px; font-weight: 600; color: #9c27b0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .report-text { font-size: 14px; color: #333; line-height: 1.6; padding: 10px 14px; background: #f5f5f7; border-radius: 8px; }
+    .report-group { background: #f5f5f7; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+    .report-group-name { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .report-row { font-size: 13px; color: #333; margin-bottom: 6px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .tag-green { background: #dcfce7; color: #166534; }
+    .tag-orange { background: #ffedd5; color: #9a3412; }
 
     .ai-btn {
-      padding: 10px 24px;
-      background: linear-gradient(135deg, #f093fb, #f5576c);
-      color: #fff;
-      border: none;
-      border-radius: 9999px;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: transform 0.1s;
+      padding: 10px 24px; background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff; border: none; border-radius: 9999px; font-size: 15px; font-weight: 500; cursor: pointer;
     }
+    .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .ai-btn:active {
-      transform: scale(0.95);
-    }
-
-    .ai-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    /* 图表容器 */
-    .chart-wrapper {
-      flex: 1;
-      position: relative;
-      min-height: 0;
-    }
-
-    .chart-wrapper canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    /* 滚动条美化 */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #d2d2d7;
-      border-radius: 3px;
-    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 3px; }
   </style>
 </head>
 <body>
   <div class="dashboard">
-    <!-- 顶部标题 -->
     <div class="header">
-      <div>
-        <h1>啦啦操评分数据大屏</h1>
-      </div>
-      <div class="subtitle">实时更新 · 自动刷新</div>
+      <h1>啦啦操评分数据大屏</h1>
+      <div class="subtitle" id="headerSubtitle">实时评分</div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="main-content initial" id="mainContent">
-      <!-- 左上: 柱状图（初始隐藏） -->
-      <div class="panel chart-panel" id="chartPanel">
-        <div class="panel-header">
-          <span class="panel-title">各组总分对比</span>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="barChart"></canvas>
-        </div>
+    <!-- 表演模式：全屏柱状图 -->
+    <div class="performance-mode" id="perfMode">
+      <div class="perf-title">
+        <h2 id="perfTitle">等待评分开始</h2>
+        <div class="perf-subtitle" id="perfSubtitle"></div>
       </div>
-
-      <!-- 右上: 雷达图（初始隐藏） -->
-      <div class="panel radar-panel" id="radarPanel">
-        <div class="panel-header">
-          <span class="panel-title">各维度雷达图</span>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="radarChart"></canvas>
-        </div>
+      <div class="perf-chart-area" id="perfChartArea" style="display:none;">
+        <canvas id="perfBarChart"></canvas>
       </div>
-
-      <!-- 左侧: 排名 -->
-      <div class="panel ranking-panel">
-        <div class="panel-header">
-          <span class="panel-title">评分数据</span>
-          <button class="ai-analyze-btn" onclick="startAiAnalysis()" id="aiAnalyzeBtn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
-            AI 智能分析
-          </button>
-        </div>
-        <div class="ranking-list" id="rankingList"></div>
+      <div class="perf-waiting" id="perfWaiting">
+        <div class="icon">&#9203;</div>
+        <p>等待教师开始评分...</p>
       </div>
+      <div style="text-align:center;display:none;" id="resultBtnArea">
+        <button class="result-btn" onclick="switchToAnalysis()">查看结果分析</button>
+      </div>
+    </div>
 
-      <!-- 右侧: AI报告 -->
-      <div class="panel ai-panel">
-        <div class="panel-header">
-          <span class="panel-title">AI分析报告</span>
-          <button class="ai-btn" onclick="generateReport()" id="aiBtn">生成报告</button>
-        </div>
-        <div class="chat-section" id="chatSection">
-          <div class="chat-messages" id="chatMessages"></div>
-          <div class="chat-input-area">
-            <button class="voice-btn" onclick="toggleVoice()" id="voiceBtn" title="语音输入">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-            </button>
-            <input type="text" class="chat-input" id="chatInput" placeholder="输入问题，如：如何提升第一组的表现？" onkeydown="if(event.key==='Enter')sendChat()">
-            <button class="chat-send-btn" onclick="sendChat()" id="chatSendBtn">发送</button>
+    <!-- 分析模式：完整大屏 -->
+    <div class="analysis-mode" id="analysisMode">
+      <div class="analysis-grid">
+        <div class="panel chart-panel"><div class="panel-header"><span class="panel-title">各组总分对比</span></div><div class="chart-wrapper"><canvas id="barChart"></canvas></div></div>
+        <div class="panel radar-panel"><div class="panel-header"><span class="panel-title">各维度雷达图</span></div><div class="chart-wrapper"><canvas id="radarChart"></canvas></div></div>
+        <div class="panel ranking-panel"><div class="panel-header"><span class="panel-title">排名</span></div><div class="ranking-list" id="rankingList"></div></div>
+        <div class="panel ai-panel">
+          <div class="panel-header"><span class="panel-title">AI分析报告</span><button class="ai-btn" onclick="generateReport()" id="aiBtn">生成报告</button></div>
+          <div class="chat-section">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+              <button class="voice-btn" onclick="toggleVoice()" id="voiceBtn" title="语音输入">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <input type="text" class="chat-input" id="chatInput" placeholder="输入问题..." onkeydown="if(event.key==='Enter')sendChat()">
+              <button class="chat-send-btn" onclick="sendChat()" id="chatSendBtn">发送</button>
+            </div>
           </div>
         </div>
       </div>
@@ -637,9 +243,14 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let socket = io();
+    let perfChart = null;
     let barChart = null;
     let radarChart = null;
     let isLoading = false;
+    let currentPerformerIndex = -1;
+    let chatContext = null;
+    let recognition = null;
+    let isRecording = false;
 
     function esc(str) {
       if (!str) return '';
@@ -648,124 +259,148 @@
 
     function renderMd(text) {
       if (!text) return '';
-      return esc(text)
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>');
+      return esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
     }
 
-    // 语音输入
-    let recognition = null;
-    let isRecording = false;
-    let chartsVisible = false;
+    // ===== 初始化 =====
+    async function init() {
+      const res = await fetch('/api/session');
+      const data = await res.json();
 
-    // AI智能分析触发
-    function startAiAnalysis() {
-      const btn = document.getElementById('aiAnalyzeBtn');
-      btn.classList.add('analyzing');
-      btn.disabled = true;
-
-      // 模拟AI分析过程
-      setTimeout(() => {
-        // 切换到完整布局
-        document.getElementById('mainContent').classList.remove('initial');
-
-        // 显示图表面板
-        setTimeout(() => {
-          document.getElementById('chartPanel').classList.add('visible');
-          document.getElementById('radarPanel').classList.add('visible');
-          chartsVisible = true;
-
-          btn.classList.remove('analyzing');
-          btn.innerHTML = `
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            分析完成
-          `;
-          btn.style.background = '#4caf50';
-
-          // 自动生成AI报告
-          generateReport();
-        }, 500);
-      }, 1500);
-    }
-
-    function initVoice() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        document.getElementById('voiceBtn').style.display = 'none';
-        return;
-      }
-
-      recognition = new SpeechRecognition();
-      recognition.lang = 'zh-CN';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('');
-        document.getElementById('chatInput').value = transcript;
-
-        // 检测到"分析"关键词时触发AI分析
-        if (transcript.includes('分析') && !chartsVisible) {
-          startAiAnalysis();
-        }
-      };
-
-      recognition.onend = () => {
-        isRecording = false;
-        const btn = document.getElementById('voiceBtn');
-        btn.classList.remove('recording');
-        btn.title = '语音输入';
-      };
-
-      recognition.onerror = (event) => {
-        console.error('语音识别错误:', event.error);
-        isRecording = false;
-        const btn = document.getElementById('voiceBtn');
-        btn.classList.remove('recording');
-        if (event.error === 'not-allowed') {
-          alert('请允许麦克风权限后重试');
-        }
-      };
-    }
-
-    function toggleVoice() {
-      if (!recognition) {
-        alert('您的浏览器不支持语音输入，请使用Chrome或Edge浏览器');
-        return;
-      }
-
-      if (isRecording) {
-        recognition.stop();
+      if (data.status === 'scoring' && data.currentPerformer >= 0) {
+        currentPerformerIndex = data.currentPerformer;
+        showPerformance(currentPerformerIndex);
+      } else if (data.currentRound > 0) {
+        // 已有评分但当前没在评分，显示最后一组
+        currentPerformerIndex = data.currentPerformer >= 0 ? data.currentPerformer : data.groups.length - 1;
+        showPerformance(currentPerformerIndex);
       } else {
-        recognition.start();
-        isRecording = true;
-        const btn = document.getElementById('voiceBtn');
-        btn.classList.add('recording');
-        btn.title = '点击停止';
+        showWaiting();
       }
     }
 
-    initVoice();
-    loadData();
-    socket.on('scoreUpdate', () => { if (!isLoading) loadData(); });
-    socket.on('sessionReset', () => { loadData(); });
+    // ===== 表演模式 =====
+    function showWaiting() {
+      document.getElementById('perfTitle').textContent = '等待评分开始';
+      document.getElementById('perfSubtitle').textContent = '';
+      document.getElementById('perfChartArea').style.display = 'none';
+      document.getElementById('perfWaiting').style.display = 'flex';
+      document.getElementById('resultBtnArea').style.display = 'none';
+    }
 
-    async function loadData() {
+    async function showPerformance(groupIndex) {
+      currentPerformerIndex = groupIndex;
+      document.getElementById('perfWaiting').style.display = 'none';
+      document.getElementById('perfChartArea').style.display = 'block';
+      document.getElementById('resultBtnArea').style.display = 'none';
+
+      try {
+        const res = await fetch(`/api/performance/${groupIndex}`);
+        const data = await res.json();
+
+        document.getElementById('perfTitle').textContent = `${data.groupName} 表演评分`;
+        document.getElementById('perfSubtitle').textContent = `教师评分 × 40% + 其他组评分 × 60%`;
+
+        // 构建柱状图数据
+        const labels = [];
+        const values = [];
+        const bgColors = [];
+        const borderColors = [];
+
+        const palette = [
+          { bg: 'rgba(233,30,140,0.85)', border: 'rgba(233,30,140,1)' },
+          { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' },
+          { bg: 'rgba(255,193,7,0.85)', border: 'rgba(255,193,7,1)' },
+          { bg: 'rgba(103,58,183,0.85)', border: 'rgba(103,58,183,1)' }
+        ];
+
+        data.peerScores.forEach((ps, i) => {
+          labels.push(ps.name);
+          values.push(ps.avg);
+          bgColors.push(palette[i % palette.length].bg);
+          borderColors.push(palette[i % palette.length].border);
+        });
+
+        if (data.teacherScore) {
+          labels.push(data.teacherScore.name);
+          values.push(data.teacherScore.avg);
+          bgColors.push('rgba(76,175,80,0.85)');
+          borderColors.push('rgba(76,175,80,1)');
+        }
+
+        renderPerfChart(labels, values, bgColors, borderColors);
+
+        // 全部评分完显示结果按钮
+        if (data.allRoundsDone) {
+          document.getElementById('resultBtnArea').style.display = 'block';
+        }
+
+        document.getElementById('headerSubtitle').textContent = `${data.groupName} · 实时评分`;
+      } catch (err) {
+        console.error('加载表演数据失败:', err);
+      }
+    }
+
+    function renderPerfChart(labels, values, bgColors, borderColors) {
+      const ctx = document.getElementById('perfBarChart').getContext('2d');
+      if (perfChart) perfChart.destroy();
+
+      const labelPlugin = {
+        id: 'barLabel',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.data.datasets.forEach((ds, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((el, idx) => {
+              const v = ds.data[idx];
+              if (v > 0) {
+                ctx.fillStyle = '#1d1d1f';
+                ctx.font = 'bold 22px SF Pro Text, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(v.toFixed(2), el.x, el.y - 8);
+              }
+            });
+          });
+        }
+      };
+
+      perfChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2, borderRadius: 10 }]
+        },
+        plugins: [labelPlugin],
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          animation: { duration: 800, easing: 'easeOutQuart' },
+          scales: {
+            y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' }, ticks: { font: { size: 16 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 18, weight: '600' } } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function switchToAnalysis() {
+      document.getElementById('perfMode').classList.add('hidden');
+      document.getElementById('analysisMode').classList.add('visible');
+      document.getElementById('headerSubtitle').textContent = '结果分析';
+      loadAnalysisData();
+    }
+
+    // ===== 分析模式 =====
+    async function loadAnalysisData() {
       if (isLoading) return;
       isLoading = true;
       try {
         const res = await fetch('/api/results');
         if (!res.ok) return;
         const data = await res.json();
-        lastResults = data.results || [];
-        updateCharts(lastResults);
-        updateRanking(lastResults);
+        updateCharts(data.results || []);
+        updateRanking(data.results || []);
       } catch (err) {
         console.error('加载数据失败:', err);
       } finally {
@@ -776,127 +411,39 @@
     function updateCharts(results) {
       const labels = results.map(r => r.groupName);
       const totals = results.map(r => r.totalAvg || 0);
-
       const colors = [
-        { bg: 'rgba(233, 30, 140, 0.85)', border: 'rgba(233, 30, 140, 1)' },
-        { bg: 'rgba(156, 39, 176, 0.85)', border: 'rgba(156, 39, 176, 1)' },
-        { bg: 'rgba(255, 193, 7, 0.85)', border: 'rgba(255, 193, 7, 1)' },
-        { bg: 'rgba(233, 30, 99, 0.85)', border: 'rgba(233, 30, 99, 1)' },
-        { bg: 'rgba(103, 58, 183, 0.85)', border: 'rgba(103, 58, 183, 1)' },
-        { bg: 'rgba(255, 87, 34, 0.85)', border: 'rgba(255, 87, 34, 1)' }
+        { bg: 'rgba(233,30,140,0.85)', border: 'rgba(233,30,140,1)' },
+        { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' },
+        { bg: 'rgba(255,193,7,0.85)', border: 'rgba(255,193,7,1)' },
+        { bg: 'rgba(233,30,99,0.85)', border: 'rgba(233,30,99,1)' }
       ];
 
-      // 柱状图
       const barCtx = document.getElementById('barChart').getContext('2d');
       if (barChart) barChart.destroy();
-
-      // 自定义插件：在柱子上方显示数值
-      const barLabelPlugin = {
-        id: 'barLabel',
-        afterDatasetsDraw(chart) {
-          const { ctx } = chart;
-          chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            meta.data.forEach((element, index) => {
-              const data = dataset.data[index];
-              if (data > 0) {
-                ctx.fillStyle = '#1d1d1f';
-                ctx.font = 'bold 16px SF Pro Text, system-ui, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                ctx.fillText(data.toFixed(2), element.x, element.y - 6);
-              }
-            });
-          });
-        }
-      };
-
       barChart = new Chart(barCtx, {
         type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: '总分',
-            data: totals,
-            backgroundColor: results.map((_, i) => colors[i % colors.length].bg),
-            borderColor: results.map((_, i) => colors[i % colors.length].border),
-            borderWidth: 2,
-            borderRadius: 8
-          }]
-        },
-        plugins: [barLabelPlugin],
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 10,
-              grid: { color: '#f0f0f0' },
-              ticks: { font: { size: 14 } }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { font: { size: 15, weight: '600' } }
-            }
-          },
-          plugins: {
-            legend: { display: false }
-          }
-        }
+        data: { labels, datasets: [{ label: '总分', data: totals, backgroundColor: results.map((_, i) => colors[i % colors.length].bg), borderColor: results.map((_, i) => colors[i % colors.length].border), borderWidth: 2, borderRadius: 8 }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' }, ticks: { font: { size: 14 } } }, x: { grid: { display: false }, ticks: { font: { size: 15, weight: '600' } } } }, plugins: { legend: { display: false } } }
       });
 
-      // 雷达图
       const radarCtx = document.getElementById('radarChart').getContext('2d');
       if (radarChart) radarChart.destroy();
-
-      const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
       const radarColors = [
-        { bg: 'rgba(233, 30, 140, 0.15)', border: 'rgba(233, 30, 140, 1)' },
-        { bg: 'rgba(156, 39, 176, 0.15)', border: 'rgba(156, 39, 176, 1)' },
-        { bg: 'rgba(255, 193, 7, 0.15)', border: 'rgba(255, 193, 7, 1)' },
-        { bg: 'rgba(233, 30, 99, 0.15)', border: 'rgba(233, 30, 99, 1)' }
+        { bg: 'rgba(233,30,140,0.15)', border: 'rgba(233,30,140,1)' },
+        { bg: 'rgba(156,39,176,0.15)', border: 'rgba(156,39,176,1)' },
+        { bg: 'rgba(255,193,7,0.15)', border: 'rgba(255,193,7,1)' },
+        { bg: 'rgba(233,30,99,0.15)', border: 'rgba(233,30,99,1)' }
       ];
-
-      const datasets = results.map((r, i) => ({
-        label: r.groupName,
-        data: r.avgScores ? r.avgScores.map(d => d.avg) : [0, 0, 0, 0, 0],
-        backgroundColor: radarColors[i % radarColors.length].bg,
-        borderColor: radarColors[i % radarColors.length].border,
-        borderWidth: 2,
-        pointBackgroundColor: radarColors[i % radarColors.length].border,
-        pointRadius: 4
-      }));
-
+      const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
       radarChart = new Chart(radarCtx, {
         type: 'radar',
-        data: { labels: dimensions, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              beginAtZero: true,
-              max: 10,
-              grid: { color: '#e0e0e0' },
-              angleLines: { color: '#e0e0e0' },
-              pointLabels: { font: { size: 14, weight: '500' } },
-              ticks: { font: { size: 12 }, stepSize: 2 }
-            }
-          },
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { font: { size: 13 }, padding: 16, usePointStyle: true }
-            }
-          }
-        }
+        data: { labels: dimensions, datasets: results.map((r, i) => ({ label: r.groupName, data: r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0], backgroundColor: radarColors[i % radarColors.length].bg, borderColor: radarColors[i % radarColors.length].border, borderWidth: 2, pointBackgroundColor: radarColors[i % radarColors.length].border, pointRadius: 4 })) },
+        options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 10, grid: { color: '#e0e0e0' }, angleLines: { color: '#e0e0e0' }, pointLabels: { font: { size: 14, weight: '500' } }, ticks: { font: { size: 12 }, stepSize: 2 } } }, plugins: { legend: { position: 'bottom', labels: { font: { size: 13 }, padding: 16, usePointStyle: true } } } }
       });
     }
 
     function updateRanking(results) {
-      const list = document.getElementById('rankingList');
-      list.innerHTML = results.map((r, i) => `
+      document.getElementById('rankingList').innerHTML = results.map((r) => `
         <div class="ranking-item">
           <div class="rank-badge rank-${r.rank}">${r.rank}</div>
           <div class="rank-info">
@@ -904,277 +451,121 @@
             <div class="rank-details">${r.avgScores ? r.avgScores.map(d => `${esc(d.dimension)} ${d.avg.toFixed(1)}`).join(' · ') : '暂无数据'}</div>
             <div class="rank-teacher">${r.teacherHasScore ? '教师评分: ' + r.teacherTotalAvg.toFixed(1) : '教师未评'}</div>
             ${r.teacherHasScore ? '<div class="rank-weight">其他组60% + 教师40%</div>' : ''}
-            ${r.badges && r.badges.length > 0 ? `
-              <div class="rank-badges">
-                ${r.badges.map(b => `<span class="honor-tag" title="${esc(b.dimension)}: ${b.score.toFixed(1)}分">🏆 ${esc(b.badge)}</span>`).join('')}
-              </div>
-            ` : ''}
           </div>
           <div class="rank-score">${r.totalAvg ? r.totalAvg.toFixed(2) : '-'}</div>
         </div>
       `).join('');
     }
 
-    // 渲染结构化报告
+    // ===== AI报告与对话 =====
     function renderReport(report) {
       if (!report) return '<div style="color:#7a7a7a;">暂无报告数据</div>';
-
       let html = '';
-
-      if (report.overview) {
-        html += `<div class="report-section">
-          <div class="report-label">整体点评</div>
-          <div class="report-text">${esc(report.overview)}</div>
-        </div>`;
-      }
-
-      if (report.groups && report.groups.length > 0) {
+      if (report.overview) html += `<div class="report-section"><div class="report-label">整体点评</div><div class="report-text">${esc(report.overview)}</div></div>`;
+      if (report.groups?.length) {
         html += '<div class="report-section"><div class="report-label">各组点评</div>';
-        report.groups.forEach(g => {
-          html += `<div class="report-group">
-            <div class="report-group-name">${esc(g.name)}</div>
-            <div class="report-row"><span class="tag tag-green">亮点</span>${esc(g.highlight)}</div>
-            <div class="report-row"><span class="tag tag-orange">建议</span>${esc(g.improve)}</div>
-          </div>`;
-        });
+        report.groups.forEach(g => { html += `<div class="report-group"><div class="report-group-name">${esc(g.name)}</div><div class="report-row"><span class="tag tag-green">亮点</span>${esc(g.highlight)}</div><div class="report-row"><span class="tag tag-orange">建议</span>${esc(g.improve)}</div></div>`; });
         html += '</div>';
       }
-
-      if (report.suggestion) {
-        html += `<div class="report-section">
-          <div class="report-label">通用建议</div>
-          <div class="report-text">${esc(report.suggestion)}</div>
-        </div>`;
-      }
-
+      if (report.suggestion) html += `<div class="report-section"><div class="report-label">通用建议</div><div class="report-text">${esc(report.suggestion)}</div></div>`;
       return html || '<div style="color:#7a7a7a;">报告内容为空</div>';
     }
 
-    // 存储上下文
-    let chatContext = null;
-
     async function generateReport() {
       const btn = document.getElementById('aiBtn');
-
-      btn.disabled = true;
-      btn.textContent = '分析中...';
-
-      const thinkingId = appendMessage('ai', '<span class="chat-thinking">正在分析评分数据，请稍候...</span>');
-
+      btn.disabled = true; btn.textContent = '分析中...';
+      const tid = appendMessage('ai', '<span class="chat-thinking">正在分析评分数据，请稍候...</span>');
       try {
-        // 先获取评分数据
-        const resultsRes = await fetch('/api/results');
-        const resultsData = await resultsRes.json();
-
-        // 生成报告
+        const rr = await fetch('/api/results');
+        const rd = await rr.json();
         const res = await fetch('/api/analyze', { method: 'POST' });
         const data = await res.json();
-        removeMessage(thinkingId);
-
-        if (!res.ok) {
-          appendMessage('ai', '抱歉，分析失败：' + esc(data.error || '请求失败'));
-        } else if (data.report) {
+        removeMessage(tid);
+        if (!res.ok) { appendMessage('ai', '分析失败：' + esc(data.error)); }
+        else if (data.report) {
           appendMessage('ai', renderReport(data.report));
-
-          // 存储上下文用于后续对话
-          const scoresText = (resultsData.results || []).map(r => {
-            const dims = r.avgScores ? r.avgScores.map(d => `${d.dimension}${d.avg.toFixed(1)}分`).join(', ') : '暂无';
-            return `${r.groupName}: 总分${r.totalAvg ? r.totalAvg.toFixed(1) : '-'}, ${dims}`;
-          }).join('\n');
-
-          const reportText = `整体点评：${data.report.overview}\n` +
-            (data.report.groups || []).map(g => `${g.name}：亮点-${g.highlight}；建议-${g.improve}`).join('\n') +
-            `\n通用建议：${data.report.suggestion}`;
-
-          chatContext = { scores: scoresText, report: reportText };
-        } else if (data.raw) {
-          appendMessage('ai', esc(data.raw));
-        } else {
-          appendMessage('ai', '未返回内容');
-        }
-      } catch (err) {
-        removeMessage(thinkingId);
-        appendMessage('ai', '生成失败: ' + esc(err.message));
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '生成报告';
-      }
+          const st = (rd.results||[]).map(r => { const d = r.avgScores ? r.avgScores.map(x => `${x.dimension}${x.avg.toFixed(1)}分`).join(', ') : ''; return `${r.groupName}: 总分${r.totalAvg?.toFixed(1)||'-'}, ${d}`; }).join('\n');
+          const rt = `整体点评：${data.report.overview}\n` + (data.report.groups||[]).map(g => `${g.name}：亮点-${g.highlight}；建议-${g.improve}`).join('\n') + `\n通用建议：${data.report.suggestion}`;
+          chatContext = { scores: st, report: rt };
+        } else if (data.raw) { appendMessage('ai', esc(data.raw)); }
+        else { appendMessage('ai', '未返回内容'); }
+      } catch (err) { removeMessage(tid); appendMessage('ai', '生成失败: ' + esc(err.message)); }
+      finally { btn.disabled = false; btn.textContent = '生成报告'; }
     }
 
-    // 对话功能
     async function sendChat() {
       const input = document.getElementById('chatInput');
       const msg = input.value.trim();
       if (!msg) return;
-
       input.value = '';
-      const sendBtn = document.getElementById('chatSendBtn');
-      sendBtn.disabled = true;
-
+      document.getElementById('chatSendBtn').disabled = true;
       appendMessage('user', msg);
-
-      // 检测是否是对比请求
-      const compareGroups = detectCompareRequest(msg);
-      if (compareGroups) {
-        const thinkingId = appendMessage('ai', '<span class="chat-thinking">正在生成对比图表...</span>', true);
-        try {
-          await generateCompareChart(compareGroups[0], compareGroups[1]);
-          removeMessage(thinkingId);
-        } catch (err) {
-          removeMessage(thinkingId);
-          appendMessage('ai', '生成对比图失败：' + err.message);
-        }
-        sendBtn.disabled = false;
-        input.focus();
-        return;
-      }
-
-      const thinkingId = appendMessage('ai', '<span class="chat-thinking">思考中...</span>', true);
-
+      const tid = appendMessage('ai', '<span class="chat-thinking">思考中...</span>', true);
       try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: 'dashboard', message: msg, context: chatContext })
-        });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'dashboard', message: msg, context: chatContext }) });
         const data = await res.json();
-
-        removeMessage(thinkingId);
-        if (!res.ok) {
-          appendMessage('ai', '抱歉，出了点问题：' + esc(data.error || '请求失败'));
-        } else {
-          appendMessage('ai', renderMd(data.reply));
-        }
-      } catch (err) {
-        removeMessage(thinkingId);
-        appendMessage('ai', '网络错误，请重试');
-      } finally {
-        sendBtn.disabled = false;
-        input.focus();
-      }
-    }
-
-    // 检测对比请求
-    function detectCompareRequest(msg) {
-      // 匹配 "对比A组和B组" 或 "比较A组 B组" 等
-      const patterns = [
-        /对比\s*(.+?)\s*和\s*(.+)/,
-        /比较\s*(.+?)\s*和\s*(.+)/,
-        /(.+?)\s*对比\s*(.+)/,
-        /(.+?)\s*比较\s*(.+)/,
-        /(.+?)\s*vs\s*(.+)/i,
-      ];
-
-      for (const p of patterns) {
-        const match = msg.match(p);
-        if (match) {
-          const groupNames = lastResults.map(r => r.groupName);
-          const g1 = groupNames.find(n => match[1].includes(n));
-          const g2 = groupNames.find(n => match[2].includes(n));
-          if (g1 && g2 && g1 !== g2) {
-            return [g1, g2];
-          }
-        }
-      }
-      return null;
-    }
-
-    // 存储最新结果
-    let lastResults = [];
-
-    // 生成对比图表
-    async function generateCompareChart(group1Name, group2Name) {
-      const g1 = lastResults.find(r => r.groupName === group1Name);
-      const g2 = lastResults.find(r => r.groupName === group2Name);
-      if (!g1 || !g2) throw new Error('未找到对比组数据');
-
-      const container = document.getElementById('chatMessages');
-      const chartId = 'compare-' + Date.now();
-
-      // 创建图表容器
-      container.innerHTML += `
-        <div class="chat-msg ai">
-          <div class="chat-avatar">&#129302;</div>
-          <div class="chat-bubble" style="width:90%;max-width:90%;">
-            <div style="font-weight:600;margin-bottom:10px;">${esc(group1Name)} vs ${esc(group2Name)} 维度对比</div>
-            <canvas id="${chartId}" height="200"></canvas>
-            <div class="compare-table" id="${chartId}-table"></div>
-          </div>
-        </div>
-      `;
-      container.scrollTop = container.scrollHeight;
-
-      // 生成图表
-      const ctx = document.getElementById(chartId).getContext('2d');
-      const dimensions = g1.avgScores.map(d => d.dimension);
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: dimensions,
-          datasets: [
-            {
-              label: group1Name,
-              data: g1.avgScores.map(d => d.avg),
-              backgroundColor: 'rgba(233, 30, 140, 0.7)',
-              borderColor: 'rgba(233, 30, 140, 1)',
-              borderWidth: 2,
-              borderRadius: 6
-            },
-            {
-              label: group2Name,
-              data: g2.avgScores.map(d => d.avg),
-              backgroundColor: 'rgba(156, 39, 176, 0.7)',
-              borderColor: 'rgba(156, 39, 176, 1)',
-              borderWidth: 2,
-              borderRadius: 6
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' } },
-            x: { grid: { display: false } }
-          },
-          plugins: {
-            legend: { position: 'bottom', labels: { font: { size: 12 } } }
-          }
-        }
-      });
-
-      // 生成对比表格
-      const tableEl = document.getElementById(chartId + '-table');
-      let tableHtml = '<table style="width:100%;margin-top:12px;font-size:13px;border-collapse:collapse;">';
-      tableHtml += '<tr style="background:#f5f5f7;"><th style="padding:8px;text-align:left;">维度</th><th style="padding:8px;">' + esc(group1Name) + '</th><th style="padding:8px;">' + esc(group2Name) + '</th><th style="padding:8px;">差距</th></tr>';
-      g1.avgScores.forEach((d, i) => {
-        const diff = (d.avg - g2.avgScores[i].avg).toFixed(1);
-        const diffColor = diff > 0 ? '#4caf50' : diff < 0 ? '#ff5722' : '#999';
-        const diffText = diff > 0 ? '+' + diff : diff;
-        tableHtml += `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">${esc(d.dimension)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;">${d.avg.toFixed(1)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;">${g2.avgScores[i].avg.toFixed(1)}</td><td style="padding:6px 8px;text-align:center;border-bottom:1px solid #eee;color:${diffColor};font-weight:600;">${diffText}</td></tr>`;
-      });
-      tableHtml += '</table>';
-      tableEl.innerHTML = tableHtml;
+        removeMessage(tid);
+        appendMessage('ai', res.ok ? renderMd(data.reply) : '抱歉：' + esc(data.error || '请求失败'));
+      } catch (err) { removeMessage(tid); appendMessage('ai', '网络错误'); }
+      finally { document.getElementById('chatSendBtn').disabled = false; input.focus(); }
     }
 
     function appendMessage(role, content, isTemp) {
-      const container = document.getElementById('chatMessages');
+      const c = document.getElementById('chatMessages');
       const id = 'msg-' + Date.now();
-      const avatar = role === 'ai' ? '&#129302;' : '&#128100;';
-      container.innerHTML += `
-        <div class="chat-msg ${role}" id="${id}">
-          <div class="chat-avatar">${avatar}</div>
-          <div class="chat-bubble">${content}</div>
-        </div>
-      `;
-      container.scrollTop = container.scrollHeight;
+      c.innerHTML += `<div class="chat-msg ${role}" id="${id}"><div class="chat-avatar">${role==='ai'?'&#129302;':'&#128100;'}</div><div class="chat-bubble">${content}</div></div>`;
+      c.scrollTop = c.scrollHeight;
       return id;
     }
+    function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
 
-    function removeMessage(id) {
-      const el = document.getElementById(id);
-      if (el) el.remove();
+    // ===== 语音 =====
+    function initVoice() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { document.getElementById('voiceBtn').style.display = 'none'; return; }
+      recognition = new SR();
+      recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = true;
+      recognition.onresult = (e) => {
+        const t = Array.from(e.results).map(r => r[0].transcript).join('');
+        document.getElementById('chatInput').value = t;
+      };
+      recognition.onend = () => { isRecording = false; document.getElementById('voiceBtn').classList.remove('recording'); };
+      recognition.onerror = (e) => { isRecording = false; document.getElementById('voiceBtn').classList.remove('recording'); if (e.error === 'not-allowed') alert('请允许麦克风权限'); };
     }
+    function toggleVoice() {
+      if (!recognition) { alert('浏览器不支持语音输入'); return; }
+      if (isRecording) { recognition.stop(); } else { recognition.start(); isRecording = true; document.getElementById('voiceBtn').classList.add('recording'); }
+    }
+
+    // ===== Socket =====
+    socket.on('roundStart', (data) => {
+      // 切回表演模式
+      document.getElementById('perfMode').classList.remove('hidden');
+      document.getElementById('analysisMode').classList.remove('visible');
+      showPerformance(data.performerIndex);
+    });
+
+    socket.on('roundEnd', (data) => {
+      // 保持当前表演视图，刷新数据
+      if (data.performerIndex >= 0) {
+        showPerformance(data.performerIndex);
+      }
+    });
+
+    socket.on('scoreUpdate', () => {
+      if (currentPerformerIndex >= 0 && !document.getElementById('analysisMode').classList.contains('visible')) {
+        showPerformance(currentPerformerIndex);
+      }
+    });
+
+    socket.on('sessionReset', () => {
+      document.getElementById('perfMode').classList.remove('hidden');
+      document.getElementById('analysisMode').classList.remove('visible');
+      showWaiting();
+    });
+
+    initVoice();
+    init();
   </script>
 </body>
 </html>
