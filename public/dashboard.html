@@ -530,9 +530,31 @@
 
       const barCtx = document.getElementById('barChart').getContext('2d');
       if (barChart) barChart.destroy();
+
+      const barLabelPlugin = {
+        id: 'barLabel',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.data.datasets.forEach((ds, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((el, idx) => {
+              const v = ds.data[idx];
+              if (v > 0) {
+                ctx.fillStyle = '#1d1d1f';
+                ctx.font = 'bold 16px SF Pro Text, system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(v.toFixed(2), el.x, el.y - 6);
+              }
+            });
+          });
+        }
+      };
+
       barChart = new Chart(barCtx, {
         type: 'bar',
         data: { labels, datasets: [{ label: '总分', data: totals, backgroundColor: results.map((_, i) => colors[i % colors.length].bg), borderColor: results.map((_, i) => colors[i % colors.length].border), borderWidth: 2, borderRadius: 8 }] },
+        plugins: [barLabelPlugin],
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' }, ticks: { font: { size: 14 } } }, x: { grid: { display: false }, ticks: { font: { size: 15, weight: '600' } } } }, plugins: { legend: { display: false } } }
       });
 
