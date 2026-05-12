@@ -105,35 +105,61 @@
     .chart-wrapper canvas { width: 100% !important; height: 100% !important; }
 
     /* AI报告按钮 */
-    .ai-report-btn {
-      flex-shrink: 0; margin-top: 12px;
-      width: 100%; padding: 14px; font-size: 16px; font-weight: 600;
-      background: linear-gradient(135deg, #f093fb, #f5576c);
-      color: #fff; border: none; border-radius: 12px;
-      cursor: pointer; transition: all 0.2s;
+    /* AI按钮区域 */
+    .ai-buttons {
+      flex-shrink: 0; display: flex; gap: 10px; margin-top: 10px;
     }
-    .ai-report-btn:hover { transform: translateY(-1px); }
+
+    .ai-eval-btn, .ai-report-btn {
+      flex: 1; padding: 10px 16px; font-size: 14px; font-weight: 600;
+      border: none; border-radius: 10px; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .ai-eval-btn {
+      background: linear-gradient(135deg, #ff9800, #f57c00); color: #fff;
+    }
+    .ai-eval-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(255,152,0,0.3); }
+    .ai-eval-btn.analyzing {
+      background: linear-gradient(90deg, #ff9800, #f57c00, #ff9800);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    }
+
+    .ai-report-btn {
+      background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff;
+    }
+    .ai-report-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(240,147,251,0.3); }
 
     /* AI对话浮层 */
     .chat-overlay {
-      position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
-      background: #fff; box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+      position: fixed; top: 0; right: 0; width: 50vw; min-width: 400px; max-width: 80vw;
+      height: 100vh; background: #fff;
+      box-shadow: -4px 0 30px rgba(0,0,0,0.15);
       display: flex; flex-direction: column;
       transform: translateX(100%); transition: transform 0.3s ease;
       z-index: 100;
     }
     .chat-overlay.open { transform: translateX(0); }
 
+    /* 拖动手柄 */
+    .chat-resize-handle {
+      position: absolute; left: 0; top: 0; width: 6px; height: 100%;
+      cursor: col-resize; background: transparent; z-index: 101;
+      transition: background 0.2s;
+    }
+    .chat-resize-handle:hover, .chat-resize-handle.dragging {
+      background: rgba(156,39,176,0.4);
+    }
+
     .chat-overlay-header {
-      padding: 16px 20px; background: linear-gradient(135deg, #e91e8c, #9c27b0);
+      padding: 14px 20px; background: linear-gradient(135deg, #e91e8c, #9c27b0);
       color: #fff; display: flex; justify-content: space-between; align-items: center;
       flex-shrink: 0;
     }
-    .chat-overlay-header h3 { font-size: 18px; font-weight: 600; }
+    .chat-overlay-header h3 { font-size: 16px; font-weight: 600; }
     .chat-close-btn {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 28px; height: 28px; border-radius: 50%;
       background: rgba(255,255,255,0.2); border: none; color: #fff;
-      font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
     }
 
     .chat-overlay-messages {
@@ -326,15 +352,20 @@
           <div class="panel-header"><span class="panel-title">排名</span></div>
           <div class="ranking-list" id="rankingList"></div>
         </div>
-        <button class="ai-eval-btn" onclick="triggerAiEval()" id="aiEvalBtn">
-          <span>&#129302;</span> AI评价
-        </button>
-        <button class="ai-report-btn" onclick="openChat()">AI报告</button>
+        <div class="ai-buttons">
+          <button class="ai-eval-btn" onclick="triggerAiEval()" id="aiEvalBtn">
+            <span>&#129302;</span> AI评价
+          </button>
+          <button class="ai-report-btn" onclick="openChat()">
+            <span>&#128172;</span> AI报告
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- AI对话浮层 -->
     <div class="chat-overlay" id="chatOverlay">
+      <div class="chat-resize-handle" id="chatResizeHandle"></div>
       <div class="chat-overlay-header">
         <h3>AI分析报告</h3>
         <button class="chat-close-btn" onclick="closeChat()">&times;</button>
@@ -645,6 +676,33 @@
     function closeChat() {
       document.getElementById('chatOverlay').classList.remove('open');
     }
+
+    // 拖动调整宽度
+    (function initResize() {
+      const handle = document.getElementById('chatResizeHandle');
+      const overlay = document.getElementById('chatOverlay');
+      let startX, startWidth;
+
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startWidth = overlay.offsetWidth;
+        handle.classList.add('dragging');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+
+      function onMouseMove(e) {
+        const newWidth = startWidth - (e.clientX - startX);
+        overlay.style.width = Math.min(Math.max(newWidth, 400), window.innerWidth * 0.8) + 'px';
+      }
+
+      function onMouseUp() {
+        handle.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+    })();
 
     async function generateReport() {
       const tid = appendMessage('ai', '<span class="chat-thinking">正在分析评分数据，请稍候...</span>');
