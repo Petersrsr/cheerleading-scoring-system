@@ -28,7 +28,8 @@
     /* ========== 表演模式 ========== */
     .performance-mode {
       flex: 1; display: flex; flex-direction: column;
-      padding: 30px 60px; gap: 20px;
+      padding: 16px 60px 12px; gap: 10px;
+      min-height: 0; overflow: hidden;
     }
     .performance-mode.hidden { display: none; }
 
@@ -36,31 +37,35 @@
       text-align: center; flex-shrink: 0;
     }
     .perf-title h2 {
-      font-size: 42px; font-weight: 700; color: #9c27b0;
+      font-size: 36px; font-weight: 700; color: #9c27b0;
       letter-spacing: 2px;
     }
     .perf-title .perf-subtitle {
-      font-size: 18px; color: #7a7a7a; margin-top: 6px;
+      font-size: 14px; color: #7a7a7a; margin-top: 2px;
     }
 
     .perf-chart-area {
-      flex: 1; background: #fff; border-radius: 16px; padding: 30px;
+      flex: 1; background: #fff; border-radius: 16px; padding: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-      position: relative;
+      position: relative; min-height: 0;
     }
     .perf-chart-area canvas { width: 100% !important; height: 100% !important; }
 
     .perf-waiting {
       flex: 1; display: flex; align-items: center; justify-content: center;
-      flex-direction: column; gap: 16px;
+      flex-direction: column; gap: 12px; min-height: 0;
     }
-    .perf-waiting .icon { font-size: 64px; }
-    .perf-waiting p { font-size: 22px; color: #7a7a7a; }
+    .perf-waiting .icon { font-size: 48px; }
+    .perf-waiting p { font-size: 20px; color: #7a7a7a; }
+
+    .result-btn-area {
+      flex-shrink: 0; text-align: center; padding: 4px 0;
+    }
 
     .result-btn {
-      padding: 18px 48px; font-size: 22px; font-weight: 600;
+      padding: 12px 40px; font-size: 20px; font-weight: 600;
       background: linear-gradient(135deg, #e91e8c, #9c27b0);
-      color: #fff; border: none; border-radius: 16px;
+      color: #fff; border: none; border-radius: 12px;
       cursor: pointer; transition: all 0.2s;
       box-shadow: 0 4px 20px rgba(233, 30, 140, 0.3);
     }
@@ -69,8 +74,8 @@
     /* ========== 分析模式 ========== */
     .analysis-mode {
       flex: 1; display: none; flex-direction: column;
-      padding: 20px 40px 30px; gap: 20px;
-      overflow: hidden;
+      padding: 20px 40px 20px; gap: 16px;
+      overflow: hidden; min-height: 0;
     }
     .analysis-mode.visible { display: flex; }
 
@@ -212,7 +217,7 @@
         <div class="icon">&#9203;</div>
         <p>等待教师开始评分...</p>
       </div>
-      <div style="text-align:center;display:none;" id="resultBtnArea">
+      <div class="result-btn-area" id="resultBtnArea" style="display:none;">
         <button class="result-btn" onclick="switchToAnalysis()">查看结果分析</button>
       </div>
     </div>
