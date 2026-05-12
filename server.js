@@ -253,7 +253,7 @@ app.get('/api/performance/:groupIndex', (req, res) => {
     const scores = session.scores[groupIndex]?.[i];
     if (scores) {
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-      peerScores.push({ name: session.groups[i], avg: parseFloat(avg.toFixed(2)), scores });
+      peerScores.push({ groupIndex: i, name: session.groups[i], avg: parseFloat(avg.toFixed(2)), scores });
     }
   }
 

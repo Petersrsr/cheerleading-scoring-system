@@ -362,6 +362,14 @@
     let recognition = null;
     let isRecording = false;
 
+    // 全局组颜色映射（按组索引固定）
+    const GROUP_COLORS = [
+      { bg: 'rgba(33,150,243,0.85)', border: 'rgba(33,150,243,1)', light: 'rgba(33,150,243,0.15)' },  // 蓝
+      { bg: 'rgba(255,152,0,0.85)', border: 'rgba(255,152,0,1)', light: 'rgba(255,152,0,0.15)' },    // 橙
+      { bg: 'rgba(76,175,80,0.85)', border: 'rgba(76,175,80,1)', light: 'rgba(76,175,80,0.15)' },    // 绿
+      { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)', light: 'rgba(156,39,176,0.15)' }  // 紫
+    ];
+
     function esc(str) {
       if (!str) return '';
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -417,25 +425,18 @@
         const bgColors = [];
         const borderColors = [];
 
-        const palette = [
-          { bg: 'rgba(33,150,243,0.85)', border: 'rgba(33,150,243,1)' },
-          { bg: 'rgba(255,152,0,0.85)', border: 'rgba(255,152,0,1)' },
-          { bg: 'rgba(76,175,80,0.85)', border: 'rgba(76,175,80,1)' },
-          { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' }
-        ];
-
-        data.peerScores.forEach((ps, i) => {
+        data.peerScores.forEach(ps => {
           labels.push(ps.name);
           values.push(ps.avg);
-          bgColors.push(palette[i % palette.length].bg);
-          borderColors.push(palette[i % palette.length].border);
+          bgColors.push(GROUP_COLORS[ps.groupIndex % GROUP_COLORS.length].bg);
+          borderColors.push(GROUP_COLORS[ps.groupIndex % GROUP_COLORS.length].border);
         });
 
         if (data.teacherScore) {
           labels.push(data.teacherScore.name);
           values.push(data.teacherScore.avg);
-          bgColors.push('rgba(76,175,80,0.85)');
-          borderColors.push('rgba(76,175,80,1)');
+          bgColors.push('rgba(158,158,158,0.85)');
+          borderColors.push('rgba(158,158,158,1)');
         }
 
         renderPerfChart(labels, values, bgColors, borderColors);
@@ -521,13 +522,6 @@
     function updateCharts(results) {
       const labels = results.map(r => r.groupName);
       const totals = results.map(r => r.totalAvg || 0);
-      const colors = [
-        { bg: 'rgba(33,150,243,0.85)', border: 'rgba(33,150,243,1)' },
-        { bg: 'rgba(255,152,0,0.85)', border: 'rgba(255,152,0,1)' },
-        { bg: 'rgba(76,175,80,0.85)', border: 'rgba(76,175,80,1)' },
-        { bg: 'rgba(156,39,176,0.85)', border: 'rgba(156,39,176,1)' }
-      ];
-
       const barCtx = document.getElementById('barChart').getContext('2d');
       if (barChart) barChart.destroy();
 
@@ -553,23 +547,17 @@
 
       barChart = new Chart(barCtx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: '总分', data: totals, backgroundColor: results.map((_, i) => colors[i % colors.length].bg), borderColor: results.map((_, i) => colors[i % colors.length].border), borderWidth: 2, borderRadius: 8 }] },
+        data: { labels, datasets: [{ label: '总分', data: totals, backgroundColor: results.map(r => GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].bg), borderColor: results.map(r => GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border), borderWidth: 2, borderRadius: 8 }] },
         plugins: [barLabelPlugin],
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 10, grid: { color: '#f0f0f0' }, ticks: { font: { size: 14 } } }, x: { grid: { display: false }, ticks: { font: { size: 15, weight: '600' } } } }, plugins: { legend: { display: false } } }
       });
 
       const radarCtx = document.getElementById('radarChart').getContext('2d');
       if (radarChart) radarChart.destroy();
-      const radarColors = [
-        { bg: 'rgba(33,150,243,0.15)', border: 'rgba(33,150,243,1)' },
-        { bg: 'rgba(255,152,0,0.15)', border: 'rgba(255,152,0,1)' },
-        { bg: 'rgba(76,175,80,0.15)', border: 'rgba(76,175,80,1)' },
-        { bg: 'rgba(156,39,176,0.15)', border: 'rgba(156,39,176,1)' }
-      ];
       const dimensions = ['节拍清晰', '层次变化准确', '动作质量', '音乐融合自然', '小组配合整齐'];
       radarChart = new Chart(radarCtx, {
         type: 'radar',
-        data: { labels: dimensions, datasets: results.map((r, i) => ({ label: r.groupName, data: r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0], backgroundColor: radarColors[i % radarColors.length].bg, borderColor: radarColors[i % radarColors.length].border, borderWidth: 2, pointBackgroundColor: radarColors[i % radarColors.length].border, pointRadius: 4 })) },
+        data: { labels: dimensions, datasets: results.map(r => ({ label: r.groupName, data: r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0], backgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].light, borderColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, borderWidth: 2, pointBackgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border, pointRadius: 4 })) },
         options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 10, grid: { color: '#e0e0e0' }, angleLines: { color: '#e0e0e0' }, pointLabels: { font: { size: 14, weight: '500' } }, ticks: { font: { size: 12 }, stepSize: 2 } } }, plugins: { legend: { position: 'bottom', labels: { font: { size: 13 }, padding: 16, usePointStyle: true } } } }
       });
     }
