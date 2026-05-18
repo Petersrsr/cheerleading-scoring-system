@@ -587,10 +587,10 @@
           labels: dimensions,
           datasets: results.map(r => {
             const peerData = r.avgScores ? r.avgScores.map(d => d.avg) : [0,0,0,0,0];
-            const teacherData = r.teacherHasScore && r.teacherScores ? r.teacherScores.map(d => d.score) : [0,0,0,0,0];
+            const teacherAvg = r.teacherHasScore ? r.teacherTotalAvg : 0;
             return {
               label: r.groupName,
-              data: [...peerData, ...teacherData],
+              data: [...peerData, teacherAvg],
               backgroundColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].light,
               borderColor: GROUP_COLORS[r.groupIndex % GROUP_COLORS.length].border,
               borderWidth: 2.5,
